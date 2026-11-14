@@ -121,7 +121,12 @@ dev の初回はこれで影響を確認してから `Default` に切り替え�
 ### 検証済み
 
 - 組み込みポリシーの定義 ID・パラメーター・許可される効果（Azure/azure-policy リポジトリで確認）
-- `bicep lint` / `bicep build-params` / checkov による静的検査（CI の `infra-static`）
+- `bicep lint` / `bicep build-params` による型検査と linter（CI の `infra-static`。警告もエラー扱い）
+- checkov による静的検査（同上）。**ただし網羅性は低い**: checkov の Bicep パーサーは `import` やユーザー定義関数などの構文を読めず、
+  CI 時点で 6 ファイルが「解析エラー」として検査対象外になっている（解析できた範囲で 19 件合格）。
+  コンパイル後の ARM JSON も試したが、入れ子デプロイ内のリソースは検査されなかった。
+  そのため、静的検査は「早く気づくための補助」と位置づけ、最終的な強制は Azure Policy に任せる。
+  Bicep を正しく展開して検査できる PSRule for Azure の導入を次の候補とする（「8. 今後」）
 
 ### 未検証（実デプロイで確認が必要）
 
@@ -154,5 +159,5 @@ dev の初回はこれで影響を確認してから `Default` に切り替え�
 2. ACR への push 経路を決める（7 を参照）
 3. アラート（WAF ブロック、Key Vault 認可失敗、コンテナ再起動）とアクショングループ
 4. データストア（PostgreSQL Flexible Server など）を Private Endpoint + Entra 認証で追加
-5. PSRule for Azure の導入（Well-Architected の観点での検査を追加）
+5. PSRule for Azure の導入（checkov で検査できていないファイルを含め、Well-Architected の観点で検査する）
 6. `infra/` と `bootstrap/` に CODEOWNERS を設定し、ガードレールの変更に人間のレビューを必須にする
