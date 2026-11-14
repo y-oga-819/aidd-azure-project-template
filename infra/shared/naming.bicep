@@ -16,7 +16,7 @@ func resourceNames(workloadName string, environmentName string, suffix string) o
   deployerIdentity: 'id-${workloadName}-${environmentName}-deployer'
 
   vnet: 'vnet-${workloadName}-${environmentName}'
-  nsgContainerApps: 'nsg-${workloadName}-${environmentName}-cae'
+  nsgAppIntegration: 'nsg-${workloadName}-${environmentName}-app'
   nsgPrivateEndpoints: 'nsg-${workloadName}-${environmentName}-pe'
 
   logAnalytics: 'log-${workloadName}-${environmentName}'
@@ -26,11 +26,11 @@ func resourceNames(workloadName string, environmentName string, suffix string) o
   backendIdentity: 'id-${workloadName}-${environmentName}-api'
 
   keyVault: take('kv-${workloadName}-${environmentName}-${suffix}', 24)
-  containerRegistry: take(replace('cr${workloadName}${environmentName}${suffix}', '-', ''), 50)
 
-  containerAppsEnvironment: 'cae-${workloadName}-${environmentName}'
-  frontendApp: 'ca-${workloadName}-${environmentName}-web'
-  backendApp: 'ca-${workloadName}-${environmentName}-api'
+  appServicePlan: 'asp-${workloadName}-${environmentName}'
+  // App Service の既定ホスト名（*.azurewebsites.net）はグローバル一意なのでサフィックスを付ける。
+  frontendApp: 'app-${workloadName}-${environmentName}-web-${suffix}'
+  backendApp: 'app-${workloadName}-${environmentName}-api-${suffix}'
 
   frontDoorProfile: 'afd-${workloadName}-${environmentName}'
   frontDoorEndpoint: 'fde-${workloadName}-${environmentName}-${suffix}'

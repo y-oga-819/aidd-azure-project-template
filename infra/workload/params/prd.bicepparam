@@ -4,8 +4,9 @@ param workloadName = 'aidd'
 param environmentName = 'prd'
 param location = 'japaneast'
 param vnetAddressPrefix = '10.20.0.0/16'
-param containerAppsSubnetPrefix = '10.20.0.0/23'
-param privateEndpointSubnetPrefix = '10.20.2.0/27'
+param appIntegrationSubnetPrefix = '10.20.0.0/26'
+param privateEndpointSubnetPrefix = '10.20.1.0/27'
 param logRetentionInDays = 90
-param minReplicas = 1
-param maxReplicas = 5
+param appServicePlanSku = 'P1v3'
+// 可用性のため 2 インスタンス以上にする。
+param appServicePlanCapacity = 2

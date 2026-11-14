@@ -134,20 +134,16 @@ az stack group create \
 """
 
 [tasks.approve-private-link]
-description = "Front Door からの Private Link 接続を Container Apps 環境側で承認する"
+description = "Front Door からの Private Link 接続を App Service（web / api）側で承認する"
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
 rg="rg-${WORKLOAD}-${ENV}"
-cae="cae-${WORKLOAD}-${ENV}"
-cae_id=$(az containerapp env show --resource-group "$rg" --name "$cae" --query id --output tsv)
-pending=$(az network private-endpoint-connection list --id "$cae_id" \
-  --query "[?properties.privateLinkServiceConnectionState.status=='Pending'].id" --output tsv)
-if [ -z "$pending" ]; then
-  echo "承認待ちの接続はありません"
-  exit 0
-fi
-for id in $pending; do
-  az network private-endpoint-connection approve --id "$id" --description "Approved for Front Door"
+for app_id in $(az webapp list --resource-group "$rg" --query "[].id" --output tsv); do
+  pending=$(az network private-endpoint-connection list --id "$app_id" \
+    --query "[?properties.privateLinkServiceConnectionState.status=='Pending'].id" --output tsv)
+  for id in $pending; do
+    az network private-endpoint-connection approve --id "$id" --description "Approved for Front Door"
+  done
 done
 """

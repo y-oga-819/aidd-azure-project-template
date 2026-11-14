@@ -4,5 +4,5 @@ param workloadName = 'aidd'
 param environmentName = 'dev'
 param location = 'japaneast'
 param logRetentionInDays = 30
-param minReplicas = 0
-param maxReplicas = 2
+param appServicePlanSku = 'P0v3'
+param appServicePlanCapacity = 1

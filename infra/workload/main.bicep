@@ -25,9 +25,9 @@ param tags object = {}
 
 // --- ネットワーク ---
 param vnetAddressPrefix string = '10.10.0.0/16'
-@description('Container Apps 環境のサブネット。ワークロードプロファイル環境は /27 以上が必要。')
-param containerAppsSubnetPrefix string = '10.10.0.0/23'
-param privateEndpointSubnetPrefix string = '10.10.2.0/27'
+@description('App Service の VNet 統合用サブネット。スケールアウトに備えて /26 以上を推奨。')
+param appIntegrationSubnetPrefix string = '10.10.0.0/26'
+param privateEndpointSubnetPrefix string = '10.10.1.0/27'
 
 // --- 監視 ---
 @minValue(30)
@@ -35,21 +35,20 @@ param privateEndpointSubnetPrefix string = '10.10.2.0/27'
 param logRetentionInDays int = 30
 
 // --- アプリ ---
-@description('フロントエンド（Angular を配信する nginx）のイメージ。初回は ACR が空なのでサンプルイメージを使う。')
-param frontendImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
-@description('バックエンド（Python API）のイメージ。')
-param backendImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
-param frontendTargetPort int = 80
-param backendTargetPort int = 80
+@description('App Service プランの SKU。Front Door からの Private Link に対応した SKU にする（Basic 以上）。')
+param appServicePlanSku string = 'P0v3'
+@minValue(1)
+param appServicePlanCapacity int = 1
+@description('web（Angular の静的ファイルを配信）のランタイム。')
+param frontendRuntime string = 'NODE|22-lts'
+@description('api（Python）のランタイム。')
+param backendRuntime string = 'PYTHON|3.12'
 
-@description('バックエンドに渡す Key Vault のシークレット。{ secretName, envName } の配列。')
+@description('api に渡す Key Vault のシークレット。{ secretName, envName } の配列。')
 param backendKeyVaultSecrets array = []
 
-param minReplicas int = 0
-param maxReplicas int = 3
-
 // --- 入口 ---
-@description('Front Door (WAF) を作成するか。false にするとインターネットからは到達できない（VNet 内からのみ）。')
+@description('Front Door (WAF) を作成するか。false にするとインターネットからは到達できない。')
 param enableFrontDoor bool = true
 
 var names = resourceNames(workloadName, environmentName, uniqueSuffix(subscription().id, workloadName, environmentName))
@@ -77,17 +76,17 @@ module network 'modules/network.bicep' = {
   name: 'network'
   params: {
     vnetName: names.vnet
-    nsgContainerAppsName: names.nsgContainerApps
+    nsgAppIntegrationName: names.nsgAppIntegration
     nsgPrivateEndpointsName: names.nsgPrivateEndpoints
     location: location
     tags: commonTags
     addressPrefix: vnetAddressPrefix
-    containerAppsSubnetPrefix: containerAppsSubnetPrefix
+    appIntegrationSubnetPrefix: appIntegrationSubnetPrefix
     privateEndpointSubnetPrefix: privateEndpointSubnetPrefix
   }
 }
 
-// アプリごとに専用の ID を持たせ、必要な権限だけを付ける（web は AcrPull のみ）。
+// アプリごとに専用の ID を持たせ、必要な権限だけを付ける（web は現時点でロールなし）。
 resource frontendIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: names.frontendIdentity
   location: location
@@ -115,46 +114,28 @@ module keyVault 'modules/keyvault.bicep' = {
   }
 }
 
-module registry 'modules/registry.bicep' = {
-  name: 'registry'
+module appService 'modules/app-service.bicep' = {
+  // keyVault の出力を参照しているので、ロール割り当てと Private Endpoint の作成後にデプロイされる。
+  name: 'app-service'
   params: {
-    name: names.containerRegistry
-    location: location
-    tags: commonTags
-    privateEndpointSubnetId: network.outputs.privateEndpointSubnetId
-    privateDnsZoneId: network.outputs.containerRegistryDnsZoneId
-    logAnalyticsWorkspaceId: monitoring.outputs.workspaceId
-    pullerPrincipalIds: [
-      frontendIdentity.properties.principalId
-      backendIdentity.properties.principalId
-    ]
-  }
-}
-
-module containerApps 'modules/container-apps.bicep' = {
-  // keyVault / registry の出力を参照しているので、ロール割り当てと Private Endpoint の作成後にデプロイされる。
-  name: 'container-apps'
-  params: {
-    environmentName: names.containerAppsEnvironment
+    planName: names.appServicePlan
     frontendAppName: names.frontendApp
     backendAppName: names.backendApp
     location: location
     tags: commonTags
-    infrastructureSubnetId: network.outputs.containerAppsSubnetId
+    planSkuName: appServicePlanSku
+    planCapacity: appServicePlanCapacity
+    appIntegrationSubnetId: network.outputs.appIntegrationSubnetId
     logAnalyticsWorkspaceId: monitoring.outputs.workspaceId
     frontendIdentityId: frontendIdentity.id
+    frontendIdentityClientId: frontendIdentity.properties.clientId
     backendIdentityId: backendIdentity.id
     backendIdentityClientId: backendIdentity.properties.clientId
-    frontendImage: frontendImage
-    backendImage: backendImage
-    frontendTargetPort: frontendTargetPort
-    backendTargetPort: backendTargetPort
-    registryLoginServer: registry.outputs.loginServer
+    frontendRuntime: frontendRuntime
+    backendRuntime: backendRuntime
     keyVaultUri: keyVault.outputs.uri
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
     backendKeyVaultSecrets: backendKeyVaultSecrets
-    minReplicas: minReplicas
-    maxReplicas: maxReplicas
   }
 }
 
@@ -165,16 +146,31 @@ module frontDoor 'modules/front-door.bicep' = if (enableFrontDoor) {
     endpointName: names.frontDoorEndpoint
     wafPolicyName: names.wafPolicy
     tags: commonTags
-    originHostName: containerApps.outputs.frontendFqdn
-    privateLinkResourceId: containerApps.outputs.environmentId
+    // 外部から届く経路はここに列挙したものだけ。経路を増やすときはこの配列を変更する（= レビュー対象）。
+    origins: [
+      {
+        name: 'api'
+        hostName: appService.outputs.backendHostName
+        resourceId: appService.outputs.backendId
+        patterns: [
+          '/api/*'
+        ]
+      }
+      {
+        name: 'web'
+        hostName: appService.outputs.frontendHostName
+        resourceId: appService.outputs.frontendId
+        patterns: [
+          '/*'
+        ]
+      }
+    ]
     privateLinkLocation: location
     logAnalyticsWorkspaceId: monitoring.outputs.workspaceId
   }
 }
 
 output frontDoorEndpoint string = enableFrontDoor ? 'https://${frontDoor!.outputs.endpointHostName}' : ''
-output containerAppsEnvironmentName string = names.containerAppsEnvironment
-output containerRegistryLoginServer string = registry.outputs.loginServer
 output keyVaultName string = keyVault.outputs.name
 output frontendAppName string = names.frontendApp
 output backendAppName string = names.backendApp

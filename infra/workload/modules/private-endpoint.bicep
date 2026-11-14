@@ -8,7 +8,7 @@ param subnetId string
 @description('接続先リソースの ID。')
 param targetResourceId string
 
-@description('接続先のサブリソース（例: vault, registry）。')
+@description('接続先のサブリソース（例: vault）。')
 param groupId string
 
 param privateDnsZoneId string

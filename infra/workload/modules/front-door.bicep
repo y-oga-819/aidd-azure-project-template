@@ -1,9 +1,10 @@
 // Front Door Premium + WAF。インターネットからの唯一の入口。
-//   - オリジン（フロントエンドアプリ）へは Private Link で接続する。
-//   - WAF は Prevention モードで、マネージドルール（OWASP 系の Default Rule Set と Bot Manager）を有効化。
+//   - オリジン（web / api の App Service）へは Private Link で接続する。アプリ自体はパブリックアクセス無効。
+//   - /api/* は api に、それ以外は web に振り分ける（ブラウザから見ると同一オリジンなので CORS が不要）。
+//   - WAF は Prevention モードで、マネージドルール（Default Rule Set と Bot Manager）を有効化。
 //   - HTTP は HTTPS へリダイレクト。
 //
-// 注意: Private Link 接続は Container Apps 環境側で「承認」が必要。
+// 注意: Private Link 接続は App Service 側で「承認」が必要。
 //       デプロイ後に `mise run //infra:approve-private-link` を実行する（docs/guardrails.md 参照）。
 
 param profileName string
@@ -11,10 +12,8 @@ param endpointName string
 param wafPolicyName string
 param tags object
 
-param originHostName string
-
-@description('Private Link の接続先（Container Apps 環境）のリソース ID。')
-param privateLinkResourceId string
+@description('振り分け先。{ name, hostName, resourceId, patterns } の配列。patterns が具体的なものを先に書く。')
+param origins array
 
 @description('Private Link の接続先リージョン。')
 param privateLinkLocation string
@@ -69,69 +68,74 @@ resource endpoint 'Microsoft.Cdn/profiles/afdEndpoints@2024-02-01' = {
   }
 }
 
-resource originGroup 'Microsoft.Cdn/profiles/originGroups@2024-02-01' = {
-  parent: profile
-  name: 'web'
-  properties: {
-    loadBalancingSettings: {
-      sampleSize: 4
-      successfulSamplesRequired: 3
-      additionalLatencyInMilliseconds: 50
-    }
-    healthProbeSettings: {
-      probePath: '/'
-      probeRequestType: 'HEAD'
-      probeProtocol: 'Https'
-      probeIntervalInSeconds: 100
-    }
-  }
-}
-
-resource origin 'Microsoft.Cdn/profiles/originGroups/origins@2024-02-01' = {
-  parent: originGroup
-  name: 'web'
-  properties: {
-    hostName: originHostName
-    originHostHeader: originHostName
-    httpPort: 80
-    httpsPort: 443
-    priority: 1
-    weight: 1000
-    enabledState: 'Enabled'
-    enforceCertificateNameCheck: true
-    sharedPrivateLinkResource: {
-      privateLink: {
-        id: privateLinkResourceId
+// オリジンが 1 つだけなので、ヘルスプローブは無効にする（無駄なトラフィックを避ける。Microsoft の推奨）。
+// Front Door の子リソースは並列に更新すると競合しやすいので 1 つずつ作る。
+@batchSize(1)
+resource originGroups 'Microsoft.Cdn/profiles/originGroups@2024-02-01' = [
+  for o in origins: {
+    parent: profile
+    name: o.name
+    properties: {
+      loadBalancingSettings: {
+        sampleSize: 4
+        successfulSamplesRequired: 3
+        additionalLatencyInMilliseconds: 50
       }
-      groupId: 'managedEnvironments'
-      privateLinkLocation: privateLinkLocation
-      requestMessage: 'Front Door ${profileName}'
     }
   }
-}
+]
 
-resource route 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-02-01' = {
-  parent: endpoint
-  name: 'default'
-  dependsOn: [
-    origin
-  ]
-  properties: {
-    originGroup: {
-      id: originGroup.id
+// Front Door の子リソースは並列に更新すると競合しやすいので 1 つずつ作る。
+@batchSize(1)
+resource originResources 'Microsoft.Cdn/profiles/originGroups/origins@2024-02-01' = [
+  for (o, i) in origins: {
+    parent: originGroups[i]
+    name: o.name
+    properties: {
+      hostName: o.hostName
+      originHostHeader: o.hostName
+      httpPort: 80
+      httpsPort: 443
+      priority: 1
+      weight: 1000
+      enabledState: 'Enabled'
+      enforceCertificateNameCheck: true
+      sharedPrivateLinkResource: {
+        privateLink: {
+          id: o.resourceId
+        }
+        groupId: 'sites'
+        privateLinkLocation: privateLinkLocation
+        requestMessage: 'Front Door ${profileName}'
+      }
     }
-    supportedProtocols: [
-      'Http'
-      'Https'
-    ]
-    patternsToMatch: [
-      '/*'
-    ]
-    forwardingProtocol: 'HttpsOnly'
-    httpsRedirect: 'Enabled'
-    linkToDefaultDomain: 'Enabled'
   }
-}
+]
+
+// Front Door の子リソースは並列に更新すると競合しやすいので 1 つずつ作る。
+@batchSize(1)
+resource routes 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-02-01' = [
+  for (o, i) in origins: {
+    parent: endpoint
+    name: o.name
+    dependsOn: [
+      originResources[i]
+    ]
+    properties: {
+      originGroup: {
+        id: originGroups[i].id
+      }
+      supportedProtocols: [
+        'Http'
+        'Https'
+      ]
+      patternsToMatch: o.patterns
+      forwardingProtocol: 'HttpsOnly'
+      httpsRedirect: 'Enabled'
+      linkToDefaultDomain: 'Enabled'
+    }
+  }
+]
 
 resource securityPolicy 'Microsoft.Cdn/profiles/securityPolicies@2024-02-01' = {
   parent: profile
