@@ -29,3 +29,10 @@ mise tasks --all    # タスク一覧
 コンポーネント(`frontend/`、`infra/` など)を足すときは、そのディレクトリに `mise.toml` を置き、共通タスク名(`setup` / `format` / `format-check` / `lint` / `typecheck` / `test` / `security`)のうち該当するものを定義する。ルートの `mise run check` と CI に自動で取り込まれるので、ルートの設定を編集する必要はない。共通タスクはクラウドの認証情報なしで通るものにし、デプロイなどは別の名前にする(例: `mise run //infra:deploy`)。
 
 PR 操作の GitHub / Azure DevOps 切り替えは [docs/vcs-provider.md](docs/vcs-provider.md) を参照。
+
+## PR の書き方とレビュー
+
+- PR 概要のテンプレート: [docs/pull_request_template.md](docs/pull_request_template.md)
+- レビュアーの観点: [docs/review-guide.md](docs/review-guide.md)
+
+テンプレートを `docs/` に置いているのは、GitHub(直下 / `docs/` / `.github/` を探す)と Azure DevOps(`.azuredevops/` / `.vsts/` / `docs/` / 直下を探す)の両方が読む場所だからです。移行しても置き場所を変える必要はありません。
