@@ -107,10 +107,6 @@ module guardrails 'modules/policy.bicep' = {
     allowedGithubOwners: [
       githubOwner
     ]
-    // 外部公開を許すのは Front Door の背後に置くフロントエンドアプリだけ。
-    externalIngressExemptResourceIds: [
-      resourceId(subscription().subscriptionId, workloadRg.name, 'Microsoft.App/containerApps', names.frontendApp)
-    ]
   }
 }
 

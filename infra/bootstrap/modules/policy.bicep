@@ -4,7 +4,7 @@
 //   - 「やってはいけない構成」を Deny で止める。IaC のレビューで見落としても、
 //     Azure 側でデプロイ自体が失敗するので、AI が書いた IaC でも安全側に倒れる。
 //   - すべて組み込みポリシーを使う。定義 ID は Azure/azure-policy リポジトリで確認済み。
-//   - 例外が要る場合は notScopes で対象リソースを明示する（フロントエンドアプリの外部公開のみ）。
+//   - 例外が要る場合は notScopes で対象リソースを明示する（現時点で例外なし）。
 //
 // 割り当ては bootstrap（特権者）からのみ行い、CI のデプロイ用 ID は変更できない。
 
@@ -18,9 +18,6 @@ param enforcementMode string
 
 @description('フェデレーション資格情報（GitHub）で許可するリポジトリ所有者。')
 param allowedGithubOwners array
-
-@description('Container Apps の外部公開禁止ポリシーから除外するアプリのリソース ID。')
-param externalIngressExemptResourceIds array = []
 
 var definitions = [
   // --- 全般 ---
@@ -62,54 +59,68 @@ var definitions = [
     }
     notScopes: []
   }
-  // --- Container Registry ---
+  // --- App Service ---
   {
-    key: 'acr-no-public-network'
-    id: '0fdf0491-d080-4575-b627-ad0e843cba0f'
+    // アプリに届くのは Front Door の Private Link だけにする。
+    key: 'app-no-public-network'
+    id: '1b5ef780-c53c-4a64-87f3-bb9c8c8094ba'
     parameters: { effect: { value: 'Deny' } }
     notScopes: []
   }
   {
-    key: 'acr-no-admin-user'
-    id: 'dc921057-6b28-4fbe-9b83-f7bec05db6c2'
+    key: 'app-https-only'
+    id: 'a4af4a39-4135-47fb-b175-47fbdf85311d'
     parameters: { effect: { value: 'Deny' } }
     notScopes: []
   }
   {
-    key: 'acr-no-anonymous-pull'
-    id: '9f2dea28-e834-476c-99c5-3507b4728395'
+    // Private Link に対応しない SKU（Free / Shared）を拒否する。
+    key: 'asp-private-link-sku'
+    id: '546fe8d2-368d-4029-a418-6af48a7f61e5'
     parameters: { effect: { value: 'Deny' } }
     notScopes: []
   }
-  // --- Container Apps ---
+  // 以下は Deny を選べない組み込みポリシー（AuditIfNotExists のみ）。IaC 側で設定し、準拠状況を監査する。
   {
-    key: 'cae-vnet-injection'
-    id: '8b346db6-85af-419b-8557-92cee2c0f9bb'
-    parameters: { effect: { value: 'Deny' } }
+    key: 'app-private-link'
+    id: '687aa49d-0982-40f8-bf6b-66d1da97a04b'
+    parameters: { effect: { value: 'AuditIfNotExists' } }
     notScopes: []
   }
   {
-    key: 'cae-internal-only'
-    id: 'd074ddf8-01a5-4b5e-a2b8-964aed452c0a'
-    parameters: { effect: { value: 'Deny' } }
+    key: 'app-latest-tls'
+    id: 'f0e6e85b-9b9f-4a4b-b67b-f730d42f1b0b'
+    parameters: { effect: { value: 'AuditIfNotExists' } }
     notScopes: []
   }
   {
-    key: 'ca-no-external-ingress'
-    id: '783ea2a8-b8fd-46be-896a-9ae79643a0b1'
-    parameters: { effect: { value: 'Deny' } }
-    notScopes: externalIngressExemptResourceIds
-  }
-  {
-    key: 'ca-https-only'
-    id: '0e80e269-43a4-4ae9-b5bc-178126b8a5cb'
-    parameters: { effect: { value: 'Deny' } }
+    key: 'app-ftps-only'
+    id: '4d24b6d4-5e53-4a4f-a7f4-618fa573ee4b'
+    parameters: { effect: { value: 'AuditIfNotExists' } }
     notScopes: []
   }
   {
-    key: 'ca-managed-identity'
-    id: 'b874ab2d-72dd-47f1-8cb5-4a306478a4e7'
-    parameters: { effect: { value: 'Deny' } }
+    key: 'app-no-remote-debugging'
+    id: 'cb510bfd-1cba-4d9f-a230-cb0976f4bb71'
+    parameters: { effect: { value: 'AuditIfNotExists' } }
+    notScopes: []
+  }
+  {
+    key: 'app-no-ftp-basic-auth'
+    id: '871b205b-57cf-4e1e-a234-492616998bf7'
+    parameters: { effect: { value: 'AuditIfNotExists' } }
+    notScopes: []
+  }
+  {
+    key: 'app-no-scm-basic-auth'
+    id: 'aede300b-d67f-480a-ae26-4b3dfb1a1fdc'
+    parameters: { effect: { value: 'AuditIfNotExists' } }
+    notScopes: []
+  }
+  {
+    key: 'app-managed-identity'
+    id: '2b9ad585-36bc-4615-b300-fd4435808332'
+    parameters: { effect: { value: 'AuditIfNotExists' } }
     notScopes: []
   }
   // --- Managed Identity ---

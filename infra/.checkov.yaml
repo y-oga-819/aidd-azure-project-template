@@ -4,7 +4,4 @@ framework:
   - bicep
 compact: true
 quiet: true
-skip-check:
-  # ACR の検疫（quarantine）はプレビュー機能で、スキャナーが「検証済み」を付けるまでプルできなくなる。
-  # イメージスキャンの仕組み（Defender for Containers など）を決めるまで保留する。guardrails.md「今後」参照。
-  - CKV_AZURE_166
+skip-check: []
