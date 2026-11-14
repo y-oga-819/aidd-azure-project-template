@@ -11,7 +11,7 @@ mise install        # ツールを揃える
 mise run setup      # 依存関係を入れる
 mise run check      # CI と同じ検査一式(format-check / lint / typecheck / test / security)
 mise run format     # 整形
-mise run pr         # check → push → PR 作成
+mise run pr -b <本文>  # check → push → PR 作成(本文は docs/pull_request_template.md の形)
 mise run pr-view    # 現在のブランチの PR と CI の状況
 mise tasks --all    # タスク一覧
 ```
