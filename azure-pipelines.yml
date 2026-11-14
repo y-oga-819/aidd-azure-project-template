@@ -1,0 +1,36 @@
+# .github/workflows/ci.yml と同じ形の Azure Pipelines 定義。
+# 状態: 未検証(Azure DevOps 上ではまだ一度も実行していない)。docs/vcs-provider.md を参照。
+#
+# 注意: Azure Repos では下の pr: トリガーは無視される。
+# PR 検証は main のブランチポリシー「Build validation」にこのパイプラインを登録して行う。
+
+trigger:
+  branches:
+    include: [main]
+
+pr:
+  branches:
+    include: [main]
+
+pool:
+  vmImage: ubuntu-24.04
+
+variables:
+  MISE_VERSION: "2026.11.7"
+  # サブディレクトリの mise.toml(backend/ など)も信頼済みとして扱う
+  MISE_TRUSTED_CONFIG_PATHS: $(Build.SourcesDirectory)
+
+steps:
+  - checkout: self
+    # gitleaks が全履歴を検査するため
+    fetchDepth: 0
+    persistCredentials: false
+
+  - bash: |
+      set -euo pipefail
+      curl -fsSL https://mise.run | MISE_VERSION="v${MISE_VERSION}" sh
+      echo "##vso[task.prependpath]$HOME/.local/bin"
+    displayName: Install mise
+
+  - bash: mise run ci
+    displayName: mise run ci

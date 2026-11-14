@@ -1,0 +1,34 @@
+# CI の定義は薄く保つ。何を検査するかは mise.toml(mise run ci)が決める。
+# 同じ形の Azure Pipelines 定義: azure-pipelines.yml
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # サブディレクトリの mise.toml(backend/ など)も信頼済みとして扱う
+      MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+    steps:
+      # サードパーティ action はタグの付け替えに備えてコミット SHA で固定する
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # gitleaks が全履歴を検査するため
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+        with:
+          version: 2026.11.7
+      - run: mise run ci

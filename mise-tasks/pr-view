@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+#MISE description="現在のブランチの PR と CI の状況を表示する"
+#MISE dir="{{config_root}}"
+set -euo pipefail
+source scripts/lib/vcs.sh
+
+provider="$(vcs_provider)"
+branch="$(vcs_current_branch)"
+
+case "$provider" in
+  github)
+    vcs_require_command gh "mise install を実行してください"
+    gh pr view "$branch"
+    echo
+    # 失敗中・実行中のチェックがあると終了コードが 0 以外になる
+    gh pr checks "$branch"
+    ;;
+  azure)
+    # 未検証: パイプラインの結果は PR のポリシー評価として返る
+    vcs_require_command az "Azure CLI と azure-devops 拡張を入れてください(docs/vcs-provider.md)"
+    pr_id="$(az repos pr list --detect true --source-branch "$branch" --status active --query '[0].pullRequestId' --output tsv)"
+    if [[ -z "$pr_id" ]]; then
+      echo "$branch の PR は見つかりませんでした" >&2
+      exit 1
+    fi
+    az repos pr show --detect true --id "$pr_id" --output table
+    az repos pr policy list --detect true --id "$pr_id" --output table
+    ;;
+esac

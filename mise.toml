@@ -1,0 +1,83 @@
+# ============================================================
+# リポジトリ全体の入口
+#
+# 人も AI エージェントも CI も、mise のタスクだけを使う。
+#   mise install      # ツールを揃える
+#   mise run setup    # 依存関係を入れる
+#   mise run check    # PR 前に CI と同じ検査を手元で流す
+#   mise run pr       # push して PR を作る
+#   mise tasks --all  # タスク一覧
+#
+# 構成: 各コンポーネント(backend/, frontend/, infra/ ...)が自分の mise.toml に
+# [tools] と [tasks] を持つ。ルートは共通ツールと集約タスクだけを持つ。
+# 新しいコンポーネントはディレクトリに mise.toml を置くだけで取り込まれ、
+# ルートを編集する必要はない(並行作業でのコンフリクトを避けるため)。
+#
+# 共通タスク名の約束(該当するものだけ定義する。ルートの check が全ディレクトリから集める):
+#   setup / format / format-check / lint / typecheck / test / security
+#   これらはクラウドの認証情報なしで通ること。deploy などは別名にする。
+# ============================================================
+
+# モノレポ機能(experimental フラグ不要になった版)を使う
+min_version = "2026.11.0"
+monorepo_root = true
+
+[monorepo]
+config_roots = ["*"]
+
+[tools]
+gitleaks = "8.30.1"
+# gh は GitHub を使う間だけ必要。Azure DevOps では az CLI(mise 管理外)を使う。
+gh = "2.104.0"
+
+[env]
+# PR 作成などの操作先。github | azure
+# Azure DevOps へ移行するときはここの既定値を変える。
+# 個人で試すときは環境変数か mise.local.toml(.gitignore 済み)で上書きする。
+AIDD_VCS_PROVIDER = "{{ get_env(name='AIDD_VCS_PROVIDER', default='github') }}"
+# PR のマージ先ブランチ
+AIDD_BASE_BRANCH = "{{ get_env(name='AIDD_BASE_BRANCH', default='main') }}"
+
+# ------------------------------------------------------------
+# 集約タスク(各コンポーネントの同名タスクをまとめて実行する)
+# ------------------------------------------------------------
+[tasks.setup]
+description = "全コンポーネントの依存関係をインストールする"
+depends = ["//...:setup"]
+
+[tasks.format]
+description = "全体を整形する(ファイルを書き換える)"
+depends = ["//...:format"]
+
+[tasks.format-check]
+description = "整形漏れを検出する(書き換えない)"
+depends = ["//...:format-check"]
+
+[tasks.lint]
+description = "静的解析"
+depends = ["//...:lint"]
+
+[tasks.typecheck]
+description = "型検査"
+depends = ["//...:typecheck"]
+
+[tasks.test]
+description = "テスト"
+depends = ["//...:test"]
+
+[tasks.secrets]
+description = "現在のブランチの履歴から秘密情報の混入を検出する(CI では全履歴を取得して実行する)"
+# 既定の gitleaks は全ブランチを走査するため、他の作業ブランチの検出で失敗しないよう HEAD に限る
+run = "gitleaks git --redact --no-banner --log-opts=HEAD ."
+
+[tasks.security]
+description = "セキュリティ検査(秘密情報 + 各コンポーネントの security)"
+depends = ["secrets", "//...:security"]
+
+[tasks.check]
+description = "CI と同じ検査一式。PR を出す前に手元で流す"
+depends = ["format-check", "lint", "typecheck", "test", "security"]
+
+[tasks.ci]
+description = "CI の入口。依存を入れてから check を流す"
+run = ["mise run setup", "mise run check"]

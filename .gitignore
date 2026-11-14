@@ -1,0 +1,18 @@
+# mise の個人設定
+mise.local.toml
+.mise.local.toml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.audit-requirements.txt
+
+# OS / エディタ
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
