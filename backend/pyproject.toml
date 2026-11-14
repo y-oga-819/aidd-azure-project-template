@@ -11,6 +11,7 @@ dev = [
   "mypy",
   "pytest",
   "pip-audit",
+  "mutmut",
 ]
 
 [build-system]
@@ -23,6 +24,8 @@ packages = ["src/app"]
 [tool.ruff]
 target-version = "py313"
 line-length = 100
+# mutmut が作るミュータントのコピー
+extend-exclude = ["mutants"]
 
 [tool.ruff.lint]
 # E/F: 基本, I: import 順, B: バグの温床, UP: 新しい書き方, S: セキュリティ(bandit 相当), SIM, RUF
@@ -42,3 +45,7 @@ files = ["src", "tests"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["--strict-markers", "-ra"]
+
+[tool.mutmut]
+# ミューテーションテスト(任意実行。docs/testing-strategy.md 6 章)。mise run test:mutation から使う
+source_paths = ["src/"]
