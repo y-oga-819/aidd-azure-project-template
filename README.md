@@ -3,7 +3,7 @@
 
 ## 開発の始め方
 
-ツールのバージョンとタスクは [mise](https://mise.jdx.dev/) で管理する。人も AI エージェントも CI も、同じ `mise run <task>` を使う。
+ツールのバージョンとタスクは [mise](https://mise.jdx.dev/) で管理する。人も AI エージェントも CI も、同じ `mise run <task>` を使う(採用理由: [ADR-0001](docs/adr-0001-task-runner.md))。
 
 ```sh
 mise trust          # 初回のみ。リポジトリの mise.toml を信頼する
