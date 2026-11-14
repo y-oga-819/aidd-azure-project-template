@@ -22,7 +22,7 @@ Angular の SPA はブラウザで動くので、ブラウザから API に届�
 
 ## 決定
 
-**A を採用する。**（一度は B で実装したが、レビューで A に切り替えた）
+**A を採用する。**
 
 - アプリは `publicNetworkAccess: Disabled` にし、Policy `app-no-public-network`（Deny）で強制する。
   AI が新しいアプリを追加して公開しようとしても、デプロイが失敗する。

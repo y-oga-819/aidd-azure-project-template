@@ -26,7 +26,7 @@ Angular（フロントエンド）と Python（バックエンド）を Azure �
 
 **A. App Service を採用し、アプリはコンテナイメージ（ACR に置く）として動かす。**
 
-当初は B（Container Apps）で書いたが、レビューで次の 2 点から A に切り替えた。
+B（Container Apps）ではなく A を選んだ決め手は次の 2 点。
 
 - **既存の Front Door + App Service 構成の実績に乗れる**（要件 4）。B で最も不確かだった「Front Door → 閉域アプリの Private Link」が、A では動いた実績のある組み合わせになる。
 - **コストに決定的な差がない**（要件 5）。固定費の大半は両案共通の Front Door Premium。アプリ部分は、低トラフィックなら B、常時負荷がある本番なら A がやや有利。
@@ -44,10 +44,10 @@ ACR 分の費用より、デプロイ経路の単純さと再現性を優先し�
 
 ## 批判的な再検討
 
-- **「Deny できないポリシーが増え、ガードレールが弱くなったのでは？」**
-  一部は弱くなった。TLS・FTP・基本認証・マネージド ID は AuditIfNotExists しか選べないので、
+- **「B より Deny できないポリシーが多く、ガードレールが弱いのでは？」**
+  一部は弱い。TLS・FTP・基本認証・マネージド ID は AuditIfNotExists しか選べないので、
   IaC 側（`app-service.bicep`）で設定し、Policy は崩れていないかの監査に使う。
-  一方、最も重要な「アプリに直接届かない」（`publicNetworkAccess`）は Deny できるので、G1 の強さは変わらない。
+  一方、最も重要な「アプリに直接届かない」（`publicNetworkAccess`）は Deny できるので、G1 の強さは B と変わらない。
 - **「フロントを App Service で動かすのは大げさでは？」**
   静的ファイルの配信だけなら Storage の静的サイトや Static Web Apps もある。ただし閉域にした Front Door 経由の構成が増えると、
   ガードレールも 2 系統になる。フロントとバックを 1 つのアプリ・同じポリシーで扱えることを優先した（ADR-0003）。
