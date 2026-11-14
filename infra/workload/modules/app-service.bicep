@@ -1,8 +1,10 @@
-// App Service（プラン 1 つに web と api を相乗り）。
+// App Service（Linux コンテナ。プラン 1 つに web と api を相乗り）。
 //
 // 構成:
-//   インターネット → Front Door (WAF) ─ Private Link ─┬→ [web] Angular の静的ファイルを配信（Node）
+//   インターネット → Front Door (WAF) ─ Private Link ─┬→ [web] Angular の静的ファイルを nginx で配信
 //                                                      └→ [api] Python（/api/* を Front Door が振り分け）
+//   - コンテナイメージは閉域の ACR から、VNet 統合 + マネージド ID（AcrPull）で取得する。
+//     アプリのデプロイは「どのイメージを使うか」の設定変更（Azure の管理 API）だけで済み、閉域の SCM サイトに届く必要がない。
 //   - 両アプリとも publicNetworkAccess を無効にし、Front Door の Private Link からのみ届く。
 //   - 送信は VNet 統合で VNet 経由にし、Key Vault へは Private Endpoint でつなぐ。
 //   - 各アプリは専用のユーザー割り当てマネージド ID を持ち、シークレットは Key Vault 参照で受け取る。
@@ -28,8 +30,15 @@ param frontendIdentityClientId string
 param backendIdentityId string
 param backendIdentityClientId string
 
-param frontendRuntime string
-param backendRuntime string
+@description('web のコンテナイメージ（例: <ACR>.azurecr.io/web:<tag>）。')
+param frontendImage string
+@description('api のコンテナイメージ。')
+param backendImage string
+param frontendPort int
+param backendPort int
+
+@description('ACR のログインサーバー。イメージがこのレジストリのものなら、マネージド ID でプルする。')
+param registryLoginServer string
 
 param keyVaultUri string
 param appInsightsConnectionString string
@@ -59,9 +68,12 @@ var commonSiteConfig = {
   scmMinTlsVersion: '1.2'
   http20Enabled: true
   remoteDebuggingEnabled: false
-  // 送信はすべて VNet 経由にする（Key Vault の Private Endpoint に届くように）。
+  // 送信はすべて VNet 経由にする（Key Vault / ACR の Private Endpoint に届くように）。
   vnetRouteAllEnabled: true
 }
+
+var frontendUsesRegistry = startsWith(frontendImage, '${registryLoginServer}/')
+var backendUsesRegistry = startsWith(backendImage, '${registryLoginServer}/')
 
 resource frontend 'Microsoft.Web/sites@2024-04-01' = {
   name: frontendAppName
@@ -79,14 +91,25 @@ resource frontend 'Microsoft.Web/sites@2024-04-01' = {
     httpsOnly: true
     publicNetworkAccess: 'Disabled'
     virtualNetworkSubnetId: appIntegrationSubnetId
+    // イメージのプルも VNet 経由にする（閉域の ACR に届くように）。
+    vnetImagePullEnabled: true
     siteConfig: union(commonSiteConfig, {
-      linuxFxVersion: frontendRuntime
-      // Angular のビルド成果物を SPA として配信する（未知のパスは index.html を返す）。
-      appCommandLine: 'pm2 serve /home/site/wwwroot --no-daemon --spa'
+      linuxFxVersion: 'DOCKER|${frontendImage}'
+      acrUseManagedIdentityCreds: frontendUsesRegistry
+      acrUserManagedIdentityID: frontendUsesRegistry ? frontendIdentityClientId : null
       appSettings: [
         {
           name: 'AZURE_CLIENT_ID'
           value: frontendIdentityClientId
+        }
+        {
+          name: 'WEBSITES_PORT'
+          value: string(frontendPort)
+        }
+        {
+          // コンテナにストレージをマウントしない（状態を持たせない）。
+          name: 'WEBSITES_ENABLE_APP_SERVICE_STORAGE'
+          value: 'false'
         }
       ]
     })
@@ -111,8 +134,11 @@ resource backend 'Microsoft.Web/sites@2024-04-01' = {
     virtualNetworkSubnetId: appIntegrationSubnetId
     // Key Vault 参照（@Microsoft.KeyVault(...)）の解決に使う ID。
     keyVaultReferenceIdentity: backendIdentityId
+    vnetImagePullEnabled: true
     siteConfig: union(commonSiteConfig, {
-      linuxFxVersion: backendRuntime
+      linuxFxVersion: 'DOCKER|${backendImage}'
+      acrUseManagedIdentityCreds: backendUsesRegistry
+      acrUserManagedIdentityID: backendUsesRegistry ? backendIdentityClientId : null
       appSettings: concat(
         [
           {
@@ -134,8 +160,12 @@ resource backend 'Microsoft.Web/sites@2024-04-01' = {
             value: 'Authorization=AAD;ClientId=${backendIdentityClientId}'
           }
           {
-            name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
-            value: 'true'
+            name: 'WEBSITES_PORT'
+            value: string(backendPort)
+          }
+          {
+            name: 'WEBSITES_ENABLE_APP_SERVICE_STORAGE'
+            value: 'false'
           }
         ],
         map(backendKeyVaultSecrets, s => {

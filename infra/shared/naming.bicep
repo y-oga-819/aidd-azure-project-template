@@ -26,6 +26,7 @@ func resourceNames(workloadName string, environmentName string, suffix string) o
   backendIdentity: 'id-${workloadName}-${environmentName}-api'
 
   keyVault: take('kv-${workloadName}-${environmentName}-${suffix}', 24)
+  containerRegistry: take(replace('cr${workloadName}${environmentName}${suffix}', '-', ''), 50)
 
   appServicePlan: 'asp-${workloadName}-${environmentName}'
   // App Service の既定ホスト名（*.azurewebsites.net）はグローバル一意なのでサフィックスを付ける。

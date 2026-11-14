@@ -1,6 +1,6 @@
 // ネットワーク。
 //   - snet-app: App Service の VNet 統合（アプリからの送信）用。Microsoft.Web/serverFarms に委任する。
-//   - snet-pe : Key Vault などの Private Endpoint を置くサブネット。
+//   - snet-pe : Key Vault / ACR の Private Endpoint を置くサブネット。
 //   - Private DNS ゾーン: Private Endpoint の名前解決用。
 //
 // アプリと PaaS はすべてパブリックアクセスを無効にする。
@@ -19,6 +19,7 @@ param privateEndpointSubnetPrefix string
 // Private DNS ゾーン名。順序は outputs のインデックスと対応する。
 var privateDnsZoneNames = [
   'privatelink.vaultcore.azure.net'
+  'privatelink.azurecr.io'
 ]
 
 resource nsgAppIntegration 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
@@ -52,7 +53,7 @@ resource nsgPrivateEndpoints 'Microsoft.Network/networkSecurityGroups@2024-05-01
         }
       }
       {
-        // Private Endpoint へはアプリからの HTTPS だけを通す（VNet 内の横移動を抑える）。
+        // Private Endpoint へはアプリからの HTTPS だけを通す（Key Vault 参照・イメージのプルとも 443）。
         name: 'Deny-All-Other-Inbound'
         properties: {
           priority: 4000
@@ -139,3 +140,4 @@ output vnetId string = vnet.id
 output appIntegrationSubnetId string = vnet.properties.subnets[0].id
 output privateEndpointSubnetId string = vnet.properties.subnets[1].id
 output keyVaultDnsZoneId string = privateDnsZones[0].id
+output containerRegistryDnsZoneId string = privateDnsZones[1].id

@@ -39,10 +39,12 @@ param logRetentionInDays int = 30
 param appServicePlanSku string = 'P0v3'
 @minValue(1)
 param appServicePlanCapacity int = 1
-@description('web（Angular の静的ファイルを配信）のランタイム。')
-param frontendRuntime string = 'NODE|22-lts'
-@description('api（Python）のランタイム。')
-param backendRuntime string = 'PYTHON|3.12'
+@description('web（Angular を nginx で配信）のコンテナイメージ。初回は ACR が空なのでサンプルイメージを使う。')
+param frontendImage string = 'mcr.microsoft.com/appsvc/staticsite:latest'
+@description('api（Python）のコンテナイメージ。')
+param backendImage string = 'mcr.microsoft.com/appsvc/staticsite:latest'
+param frontendPort int = 80
+param backendPort int = 80
 
 @description('api に渡す Key Vault のシークレット。{ secretName, envName } の配列。')
 param backendKeyVaultSecrets array = []
@@ -86,7 +88,7 @@ module network 'modules/network.bicep' = {
   }
 }
 
-// アプリごとに専用の ID を持たせ、必要な権限だけを付ける（web は現時点でロールなし）。
+// アプリごとに専用の ID を持たせ、必要な権限だけを付ける（web は AcrPull のみ）。
 resource frontendIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: names.frontendIdentity
   location: location
@@ -114,8 +116,24 @@ module keyVault 'modules/keyvault.bicep' = {
   }
 }
 
+module registry 'modules/registry.bicep' = {
+  name: 'registry'
+  params: {
+    name: names.containerRegistry
+    location: location
+    tags: commonTags
+    privateEndpointSubnetId: network.outputs.privateEndpointSubnetId
+    privateDnsZoneId: network.outputs.containerRegistryDnsZoneId
+    logAnalyticsWorkspaceId: monitoring.outputs.workspaceId
+    pullerPrincipalIds: [
+      frontendIdentity.properties.principalId
+      backendIdentity.properties.principalId
+    ]
+  }
+}
+
 module appService 'modules/app-service.bicep' = {
-  // keyVault の出力を参照しているので、ロール割り当てと Private Endpoint の作成後にデプロイされる。
+  // keyVault / registry の出力を参照しているので、ロール割り当てと Private Endpoint の作成後にデプロイされる。
   name: 'app-service'
   params: {
     planName: names.appServicePlan
@@ -131,8 +149,11 @@ module appService 'modules/app-service.bicep' = {
     frontendIdentityClientId: frontendIdentity.properties.clientId
     backendIdentityId: backendIdentity.id
     backendIdentityClientId: backendIdentity.properties.clientId
-    frontendRuntime: frontendRuntime
-    backendRuntime: backendRuntime
+    frontendImage: frontendImage
+    backendImage: backendImage
+    frontendPort: frontendPort
+    backendPort: backendPort
+    registryLoginServer: registry.outputs.loginServer
     keyVaultUri: keyVault.outputs.uri
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
     backendKeyVaultSecrets: backendKeyVaultSecrets
@@ -171,6 +192,7 @@ module frontDoor 'modules/front-door.bicep' = if (enableFrontDoor) {
 }
 
 output frontDoorEndpoint string = enableFrontDoor ? 'https://${frontDoor!.outputs.endpointHostName}' : ''
+output containerRegistryLoginServer string = registry.outputs.loginServer
 output keyVaultName string = keyVault.outputs.name
 output frontendAppName string = names.frontendApp
 output backendAppName string = names.backendApp
