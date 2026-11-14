@@ -1,7 +1,7 @@
 # ADR-0002: アプリの実行基盤に Azure App Service（コンテナ）を採用する
 
 - 状態: 提案（2026-11-14）
-- 関連: [ADR-0003](0003-single-public-entry.md)、[infra/docs/guardrails.md](../../infra/docs/guardrails.md)
+- 関連: [ADR-0003](0003-single-public-entry.md)、[infra/docs/azure-infra-guardrails.md](../../infra/docs/azure-infra-guardrails.md)
 
 ## 背景（なぜ決める必要があるか）
 
@@ -52,7 +52,7 @@ ACR 分の費用より、デプロイ経路の単純さと再現性を優先し�
   静的ファイルの配信だけなら Storage の静的サイトや Static Web Apps もある。ただし閉域にした Front Door 経由の構成が増えると、
   ガードレールも 2 系統になる。フロントとバックを 1 つのアプリ・同じポリシーで扱えることを優先した（ADR-0003）。
 - **「デプロイ経路の問題（閉域だと GitHub ホストランナーから届かない）は解決したか？」**
-  半分だけ。コンテナにしたので、App Service への反映は管理 API で済む。ただし閉域の ACR にイメージを push する経路は残る。アプリの CD を作るときに決める（guardrails.md 7 章）。
+  半分だけ。コンテナにしたので、App Service への反映は管理 API で済む。ただし閉域の ACR にイメージを push する経路は残る。アプリの CD を作るときに決める（azure-infra-guardrails.md 7 章）。
 
 ## 見直しの条件
 

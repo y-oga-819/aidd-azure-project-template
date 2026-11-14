@@ -166,7 +166,7 @@ resource assignments 'Microsoft.Authorization/policyAssignments@2024-04-01' = [
       notScopes: def.notScopes
       nonComplianceMessages: [
         {
-          message: 'このリソース構成はガードレール (${def.key}) に違反しています。infra/docs/guardrails.md を参照してください。'
+          message: 'このリソース構成はガードレール (${def.key}) に違反しています。infra/docs/azure-infra-guardrails.md を参照してください。'
         }
       ]
     }

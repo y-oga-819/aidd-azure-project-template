@@ -6,7 +6,7 @@
 // App Service は VNet 統合 + マネージド ID（AcrPull）でここからイメージを取得する。
 //
 // 注意: パブリックアクセスを無効にすると、GitHub ホストランナーからイメージを push できない。
-// VNet 内のセルフホストランナーなどが必要。docs/guardrails.md の「既知の制約」を参照。
+// VNet 内のセルフホストランナーなどが必要。docs/azure-infra-guardrails.md の「既知の制約」を参照。
 
 param name string
 param location string

@@ -5,7 +5,7 @@
 //   - HTTP は HTTPS へリダイレクト。
 //
 // 注意: Private Link 接続は App Service 側で「承認」が必要。
-//       デプロイ後に `mise run //infra:approve-private-link` を実行する（docs/guardrails.md 参照）。
+//       デプロイ後に `mise run //infra:approve-private-link` を実行する（docs/azure-infra-guardrails.md 参照）。
 
 param profileName string
 param endpointName string

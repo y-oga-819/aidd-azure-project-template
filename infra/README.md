@@ -5,7 +5,7 @@ Angular（フロントエンド）と Python（バックエンド）を動かす
 - なぜ Bicep か: [ADR-0001](../docs/adr/0001-iac-tool.md)
 - なぜ App Service か: [ADR-0002](../docs/adr/0002-hosting-app-service.md)
 - なぜ入口を Front Door 1 つにし、フロントとバックを 1 コンテナにまとめるか: [ADR-0003](../docs/adr/0003-single-public-entry.md)
-- 何を守っているか・未検証事項: [docs/guardrails.md](docs/guardrails.md)
+- 何を守っているか・未検証事項: [docs/azure-infra-guardrails.md](docs/azure-infra-guardrails.md)
 
 ## 構成
 

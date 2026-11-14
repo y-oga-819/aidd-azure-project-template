@@ -28,7 +28,7 @@ resource nsgAppIntegration 'Microsoft.Network/networkSecurityGroups@2024-05-01' 
   tags: tags
   properties: {
     // VNet 統合サブネットはアプリからの送信だけに使われ、受信はない。既定ルールに任せる。
-    // 送信の制限（Azure Firewall + UDR）は未対応。docs/guardrails.md の「今後」を参照。
+    // 送信の制限（Azure Firewall + UDR）は未対応。docs/azure-infra-guardrails.md の「今後」を参照。
     securityRules: []
   }
 }

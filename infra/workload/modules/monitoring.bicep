@@ -30,7 +30,7 @@ resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
       // 共有キーでの書き込みを禁止し、Entra ID 認証のみにする。
       disableLocalAuth: true
     }
-    // 取り込み・クエリのプライベート化（AMPLS）は未対応。docs/guardrails.md の「今後」を参照。
+    // 取り込み・クエリのプライベート化（AMPLS）は未対応。docs/azure-infra-guardrails.md の「今後」を参照。
     publicNetworkAccessForIngestion: 'Enabled'
     publicNetworkAccessForQuery: 'Enabled'
   }

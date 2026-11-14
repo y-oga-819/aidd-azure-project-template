@@ -2,7 +2,7 @@
 // workload: CI（GitHub Actions / 将来は Azure DevOps）がデプロイするアプリ基盤。
 // 前提として bootstrap でリソースグループ・デプロイ用 ID・Policy が作成済みであること。
 //
-// 構成の全体像と各ガードレールの理由は infra/docs/guardrails.md を参照。
+// 構成の全体像と各ガードレールの理由は infra/docs/azure-infra-guardrails.md を参照。
 // =============================================================================
 targetScope = 'resourceGroup'
 
