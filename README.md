@@ -30,6 +30,13 @@ mise tasks --all    # タスク一覧
 
 PR 操作の GitHub / Azure DevOps 切り替えは [docs/vcs-provider.md](docs/vcs-provider.md) を参照。
 
+## 開発の進め方とテスト
+
+- 進め方(計画 → テスト → 実装、コンフリクトの避け方と解消): [docs/development-flow.md](docs/development-flow.md)
+- テスト戦略: [docs/testing-strategy.md](docs/testing-strategy.md)
+- 仕様の正本はテストにし、計画は使い捨てにする: [ADR-0005](docs/adr/0005-tests-as-specification.md)
+- テンプレート: [計画](docs/templates/plan.md)、[機能ごとの README](docs/templates/feature-readme.md)
+
 ## PR の書き方とレビュー
 
 - PR 概要のテンプレート: [docs/pull_request_template.md](docs/pull_request_template.md)
