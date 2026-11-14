@@ -1,6 +1,6 @@
 # ADR-0004: タスクランナーと CI の入口に mise を採用する
 
-- 状態: 提案(2026-11-14)
+- 状態: 採用（2026-11-14）
 - 関連: [ルートの mise.toml](../../mise.toml)、[vcs-provider.md](../vcs-provider.md)
 
 ## 背景(なぜ決める必要があるか)
@@ -36,9 +36,9 @@
 ## 結果(この判断で受け入れること)
 
 - **mise 2026.11 のモノレポ機能に依存する**(`min_version = "2026.11.0"`)。比較的新しい機能で、挙動が変わる可能性がある。mise のバージョンは CI で固定し、上げるときは `mise run ci` が通ることを確かめる。
-- Windows ネイティブでの動作は確かめていない(WSL を前提とする)。
+- Windows ネイティブでの動作は確かめず、WSL を前提とする。
 - az CLI は mise で管理しない(Azure DevOps へ移るときに各自で入れる)。
-- Azure DevOps 側(`az repos`、`azure-pipelines.yml`)は未検証。項目は [vcs-provider.md](../vcs-provider.md) にある。
+- Azure DevOps 側(`az repos`、`azure-pipelines.yml`)は、移るときに確かめる。確かめる項目は [vcs-provider.md](../vcs-provider.md) に置く。
 
 ## 見直す条件
 
