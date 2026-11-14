@@ -13,7 +13,7 @@ Angular（フロントエンド）と Python（バックエンド）を動かす
 infra/
 ├── shared/naming.bicep      命名規約（bootstrap と workload で共有）
 ├── bootstrap/               特権者が手動で実行: RG、CI 用 ID、ロール、Policy
-├── workload/                CI が実行: ネットワーク、App Service、Key Vault、監視、Front Door
+├── workload/                CI が実行: ネットワーク、App Service（コンテナ）、ACR、Key Vault、監視、Front Door
 ├── bicepconfig.json         linter 設定
 ├── .checkov.yaml            checkov 設定
 └── mise.toml                ツールとタスク
