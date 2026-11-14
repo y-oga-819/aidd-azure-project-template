@@ -6,10 +6,13 @@
 # Azure に接続するタスクは whatif / deploy / bootstrap など別の名前にする。
 
 [tools]
-"aqua:Azure/bicep" = "0.48.1"
 "aqua:bridgecrewio/checkov" = "3.4.4"
 
 [env]
+# bicep は az CLI 経由（~/.azure/bin）で入れ、バージョンを固定する。
+# aqua の bicep パッケージは Linux で musl 版バイナリが選ばれ、GitHub ホストランナーで実行できなかったため。
+BICEP_VERSION = "0.48.1"
+_.path = ["{{env.HOME}}/.azure/bin"]
 # 既定の環境。`ENV=prd mise run //infra:whatif` のように上書きする。
 ENV = "dev"
 LOCATION = "japaneast"
@@ -19,7 +22,20 @@ WORKLOAD = "aidd"
 # 静的検査（認証不要）
 # ---------------------------------------------------------------------------
 
+[tasks.setup-bicep]
+description = "固定バージョンの bicep CLI を az 経由で入れる（ログイン不要）"
+hide = true
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "$(bicep --version 2>/dev/null | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+' || true)" != "$BICEP_VERSION" ]; then
+  az bicep install --version "v${BICEP_VERSION}"
+fi
+bicep --version
+"""
+
 [tasks.format]
+depends = ["setup-bicep"]
 description = "Bicep ファイルを整形する"
 run = """
 #!/usr/bin/env bash
@@ -30,6 +46,7 @@ done
 """
 
 [tasks.format-check]
+depends = ["setup-bicep"]
 description = "Bicep ファイルが整形済みか確認する"
 run = """
 #!/usr/bin/env bash
@@ -45,6 +62,7 @@ exit $status
 """
 
 [tasks.lint]
+depends = ["setup-bicep"]
 description = "Bicep のビルドと linter を実行する（警告もエラー扱い）"
 run = """
 #!/usr/bin/env bash
