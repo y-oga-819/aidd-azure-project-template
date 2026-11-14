@@ -134,7 +134,7 @@ az stack group create \
 """
 
 [tasks.approve-private-link]
-description = "Front Door からの Private Link 接続を App Service（web / api）側で承認する"
+description = "Front Door からの Private Link 接続を App Service 側で承認する"
 run = """
 #!/usr/bin/env bash
 set -euo pipefail

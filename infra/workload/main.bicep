@@ -39,15 +39,13 @@ param logRetentionInDays int = 30
 param appServicePlanSku string = 'P0v3'
 @minValue(1)
 param appServicePlanCapacity int = 1
-@description('web（Angular を nginx で配信）のコンテナイメージ。初回は ACR が空なのでサンプルイメージを使う。')
-param frontendImage string = 'mcr.microsoft.com/appsvc/staticsite:latest'
-@description('api（Python）のコンテナイメージ。')
-param backendImage string = 'mcr.microsoft.com/appsvc/staticsite:latest'
-param frontendPort int = 80
-param backendPort int = 80
+@description('アプリ（Angular の静的ファイルと Python の API を 1 つにまとめたもの）のコンテナイメージ。初回は ACR が空なのでサンプルイメージを使う。')
+param appImage string = 'mcr.microsoft.com/appsvc/staticsite:latest'
+@description('コンテナが待ち受けるポート。')
+param appPort int = 80
 
-@description('api に渡す Key Vault のシークレット。{ secretName, envName } の配列。')
-param backendKeyVaultSecrets array = []
+@description('アプリに渡す Key Vault のシークレット。{ secretName, envName } の配列。')
+param appKeyVaultSecrets array = []
 
 // --- 入口 ---
 @description('Front Door (WAF) を作成するか。false にするとインターネットからは到達できない。')
@@ -69,7 +67,7 @@ module monitoring 'modules/monitoring.bicep' = {
     tags: commonTags
     retentionInDays: logRetentionInDays
     telemetryPublisherPrincipalIds: [
-      backendIdentity.properties.principalId
+      appIdentity.properties.principalId
     ]
   }
 }
@@ -88,15 +86,9 @@ module network 'modules/network.bicep' = {
   }
 }
 
-// アプリごとに専用の ID を持たせ、必要な権限だけを付ける（web は AcrPull のみ）。
-resource frontendIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: names.frontendIdentity
-  location: location
-  tags: commonTags
-}
-
-resource backendIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: names.backendIdentity
+// アプリのマネージド ID。必要な権限（AcrPull / Key Vault Secrets User / Monitoring Metrics Publisher）だけを付ける。
+resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: names.appIdentity
   location: location
   tags: commonTags
 }
@@ -111,7 +103,7 @@ module keyVault 'modules/keyvault.bicep' = {
     privateDnsZoneId: network.outputs.keyVaultDnsZoneId
     logAnalyticsWorkspaceId: monitoring.outputs.workspaceId
     secretReaderPrincipalIds: [
-      backendIdentity.properties.principalId
+      appIdentity.properties.principalId
     ]
   }
 }
@@ -126,8 +118,7 @@ module registry 'modules/registry.bicep' = {
     privateDnsZoneId: network.outputs.containerRegistryDnsZoneId
     logAnalyticsWorkspaceId: monitoring.outputs.workspaceId
     pullerPrincipalIds: [
-      frontendIdentity.properties.principalId
-      backendIdentity.properties.principalId
+      appIdentity.properties.principalId
     ]
   }
 }
@@ -137,26 +128,21 @@ module appService 'modules/app-service.bicep' = {
   name: 'app-service'
   params: {
     planName: names.appServicePlan
-    frontendAppName: names.frontendApp
-    backendAppName: names.backendApp
+    appName: names.app
     location: location
     tags: commonTags
     planSkuName: appServicePlanSku
     planCapacity: appServicePlanCapacity
     appIntegrationSubnetId: network.outputs.appIntegrationSubnetId
     logAnalyticsWorkspaceId: monitoring.outputs.workspaceId
-    frontendIdentityId: frontendIdentity.id
-    frontendIdentityClientId: frontendIdentity.properties.clientId
-    backendIdentityId: backendIdentity.id
-    backendIdentityClientId: backendIdentity.properties.clientId
-    frontendImage: frontendImage
-    backendImage: backendImage
-    frontendPort: frontendPort
-    backendPort: backendPort
+    identityId: appIdentity.id
+    identityClientId: appIdentity.properties.clientId
+    image: appImage
+    port: appPort
     registryLoginServer: registry.outputs.loginServer
     keyVaultUri: keyVault.outputs.uri
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
-    backendKeyVaultSecrets: backendKeyVaultSecrets
+    keyVaultSecrets: appKeyVaultSecrets
   }
 }
 
@@ -170,17 +156,9 @@ module frontDoor 'modules/front-door.bicep' = if (enableFrontDoor) {
     // 外部から届く経路はここに列挙したものだけ。経路を増やすときはこの配列を変更する（= レビュー対象）。
     origins: [
       {
-        name: 'api'
-        hostName: appService.outputs.backendHostName
-        resourceId: appService.outputs.backendId
-        patterns: [
-          '/api/*'
-        ]
-      }
-      {
-        name: 'web'
-        hostName: appService.outputs.frontendHostName
-        resourceId: appService.outputs.frontendId
+        name: 'app'
+        hostName: appService.outputs.hostName
+        resourceId: appService.outputs.id
         patterns: [
           '/*'
         ]
@@ -194,5 +172,4 @@ module frontDoor 'modules/front-door.bicep' = if (enableFrontDoor) {
 output frontDoorEndpoint string = enableFrontDoor ? 'https://${frontDoor!.outputs.endpointHostName}' : ''
 output containerRegistryLoginServer string = registry.outputs.loginServer
 output keyVaultName string = keyVault.outputs.name
-output frontendAppName string = names.frontendApp
-output backendAppName string = names.backendApp
+output appName string = names.app

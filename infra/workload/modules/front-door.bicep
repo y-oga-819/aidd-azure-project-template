@@ -1,6 +1,6 @@
 // Front Door Premium + WAF。インターネットからの唯一の入口。
-//   - オリジン（web / api の App Service）へは Private Link で接続する。アプリ自体はパブリックアクセス無効。
-//   - /api/* は api に、それ以外は web に振り分ける（ブラウザから見ると同一オリジンなので CORS が不要）。
+//   - オリジン（App Service）へは Private Link で接続する。アプリ自体はパブリックアクセス無効。
+//   - 経路は origins 配列で受け取る。現在はアプリ 1 つに全パスを送る（/api の振り分けはアプリ内で行う）。
 //   - WAF は Prevention モードで、マネージドルール（Default Rule Set と Bot Manager）を有効化。
 //   - HTTP は HTTPS へリダイレクト。
 //

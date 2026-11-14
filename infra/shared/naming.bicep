@@ -22,16 +22,14 @@ func resourceNames(workloadName string, environmentName string, suffix string) o
   logAnalytics: 'log-${workloadName}-${environmentName}'
   appInsights: 'appi-${workloadName}-${environmentName}'
 
-  frontendIdentity: 'id-${workloadName}-${environmentName}-web'
-  backendIdentity: 'id-${workloadName}-${environmentName}-api'
+  appIdentity: 'id-${workloadName}-${environmentName}-app'
 
   keyVault: take('kv-${workloadName}-${environmentName}-${suffix}', 24)
   containerRegistry: take(replace('cr${workloadName}${environmentName}${suffix}', '-', ''), 50)
 
   appServicePlan: 'asp-${workloadName}-${environmentName}'
   // App Service の既定ホスト名（*.azurewebsites.net）はグローバル一意なのでサフィックスを付ける。
-  frontendApp: 'app-${workloadName}-${environmentName}-web-${suffix}'
-  backendApp: 'app-${workloadName}-${environmentName}-api-${suffix}'
+  app: 'app-${workloadName}-${environmentName}-${suffix}'
 
   frontDoorProfile: 'afd-${workloadName}-${environmentName}'
   frontDoorEndpoint: 'fde-${workloadName}-${environmentName}-${suffix}'
