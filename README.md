@@ -1,0 +1,2 @@
+# aidd-azure-project-template
+フロントエンドをAngular、バックエンドをpythonで実装して、AI駆動に適したアーキテクチャをセキュアに保ちながらAzure上に構築するプロジェクトの検証リポジトリ。
