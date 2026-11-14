@@ -59,6 +59,25 @@ var definitions = [
     }
     notScopes: []
   }
+  // --- Container Registry ---
+  {
+    key: 'acr-no-public-network'
+    id: '0fdf0491-d080-4575-b627-ad0e843cba0f'
+    parameters: { effect: { value: 'Deny' } }
+    notScopes: []
+  }
+  {
+    key: 'acr-no-admin-user'
+    id: 'dc921057-6b28-4fbe-9b83-f7bec05db6c2'
+    parameters: { effect: { value: 'Deny' } }
+    notScopes: []
+  }
+  {
+    key: 'acr-no-anonymous-pull'
+    id: '9f2dea28-e834-476c-99c5-3507b4728395'
+    parameters: { effect: { value: 'Deny' } }
+    notScopes: []
+  }
   // --- App Service ---
   {
     // アプリに届くのは Front Door の Private Link だけにする。
