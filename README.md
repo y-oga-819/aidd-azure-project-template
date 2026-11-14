@@ -15,6 +15,7 @@ mise run pr -b <本文>  # check → push → PR 作成(本文は docs/pull_requ
 mise run pr-view    # 現在のブランチの PR と CI の状況
 mise run docs:spec  # テストから仕様一覧を出す(テストが仕様の正本)
 mise run plan:verify <計画>  # 計画のテストケース一覧とテストを照合する
+mise run test:mutation      # ミューテーションテスト(任意。変更したファイルだけ)
 mise tasks --all    # タスク一覧
 ```
 
