@@ -130,7 +130,7 @@ dev の初回はこれで影響を確認してから `Default` に切り替え�
 | bootstrap 全体 | サブスクリプション スコープのデプロイ、ABAC 条件の書式 |
 | ABAC 条件付きの RBAC 管理者 | 条件式の構文と、PrincipalType 条件が期待どおり効くか |
 | Front Door → Container Apps の Private Link | `groupId: managedEnvironments` での接続、`approve-private-link` タスクでの承認、内部モード + `publicNetworkAccess: Disabled` との組み合わせ |
-| Container Apps `@2025-01-01` の `publicNetworkAccess` | API バージョンとプロパティの対応 |
+| Container Apps 環境の `publicNetworkAccess`（`@2025-07-01`） | 型定義には存在する（lint で確認）が、内部モードとの組み合わせで期待どおり動くか |
 | web → api の内部 HTTPS 呼び出し | 内部 FQDN と証明書の扱い |
 | Key Vault 参照のシークレット | 初回デプロイ時、ロール割り当ての反映遅延で失敗する可能性 |
 | `kv-resource-logs` の `requiredRetentionDays: 0` | 保持日数を診断設定で持たない構成で準拠と判定されるか |

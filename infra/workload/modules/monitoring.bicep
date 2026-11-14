@@ -56,7 +56,10 @@ resource telemetryPublishers 'Microsoft.Authorization/roleAssignments@2022-04-01
     properties: {
       principalId: principalId
       principalType: 'ServicePrincipal'
-      roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', monitoringMetricsPublisherRoleId)
+      roleDefinitionId: subscriptionResourceId(
+        'Microsoft.Authorization/roleDefinitions',
+        monitoringMetricsPublisherRoleId
+      )
     }
   }
 ]

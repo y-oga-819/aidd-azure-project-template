@@ -19,11 +19,14 @@ var roleIds = {
   monitoringMetricsPublisher: '3913510d-42f4-4e42-8a64-420c390055eb'
 }
 
-var assignableRoles = join([
-  roleIds.acrPull
-  roleIds.keyVaultSecretsUser
-  roleIds.monitoringMetricsPublisher
-], ', ')
+var assignableRoles = join(
+  [
+    roleIds.acrPull
+    roleIds.keyVaultSecretsUser
+    roleIds.monitoringMetricsPublisher
+  ],
+  ', '
+)
 
 // ABAC 条件: 書き込み・削除とも、上記ロールかつ ServicePrincipal（マネージド ID）宛てのみ許可する。
 var rbacCondition = '((!(ActionMatches{\'Microsoft.Authorization/roleAssignments/write\'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {${assignableRoles}} AND @Request[Microsoft.Authorization/roleAssignments:PrincipalType] ForAnyOfAnyValues:StringEqualsIgnoreCase {\'ServicePrincipal\'})) AND ((!(ActionMatches{\'Microsoft.Authorization/roleAssignments/delete\'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {${assignableRoles}}))'

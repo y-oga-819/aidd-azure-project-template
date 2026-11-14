@@ -132,12 +132,8 @@ module registry 'modules/registry.bicep' = {
 }
 
 module containerApps 'modules/container-apps.bicep' = {
+  // keyVault / registry の出力を参照しているので、ロール割り当てと Private Endpoint の作成後にデプロイされる。
   name: 'container-apps'
-  // Key Vault 参照と ACR プルは、ロール割り当てと Private Endpoint ができてからでないと失敗する。
-  dependsOn: [
-    keyVault
-    registry
-  ]
   params: {
     environmentName: names.containerAppsEnvironment
     frontendAppName: names.frontendApp

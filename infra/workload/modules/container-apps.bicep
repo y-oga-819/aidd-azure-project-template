@@ -39,7 +39,7 @@ param backendKeyVaultSecrets array = []
 param minReplicas int = 0
 param maxReplicas int = 3
 
-resource managedEnvironment 'Microsoft.App/managedEnvironments@2025-01-01' = {
+resource managedEnvironment 'Microsoft.App/managedEnvironments@2025-07-01' = {
   name: environmentName
   location: location
   tags: tags
@@ -87,7 +87,7 @@ resource environmentDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-0
 var frontendUsesRegistry = startsWith(frontendImage, '${registryLoginServer}/')
 var backendUsesRegistry = startsWith(backendImage, '${registryLoginServer}/')
 
-resource backend 'Microsoft.App/containerApps@2025-01-01' = {
+resource backend 'Microsoft.App/containerApps@2025-07-01' = {
   name: backendAppName
   location: location
   tags: tags
@@ -169,7 +169,7 @@ resource backend 'Microsoft.App/containerApps@2025-01-01' = {
   }
 }
 
-resource frontend 'Microsoft.App/containerApps@2025-01-01' = {
+resource frontend 'Microsoft.App/containerApps@2025-07-01' = {
   name: frontendAppName
   location: location
   tags: tags
