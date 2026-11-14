@@ -1,0 +1,37 @@
+# backend(Python)のツールとタスク。外からは //backend:<task> で呼べる。
+[tools]
+# Azure 側(App Service / Functions)のランタイム対応を優先して 3.13 に固定する
+python = "3.13.18"
+uv = "0.13.8"
+
+[env]
+# uv が mise の Python を使い、勝手に別の Python を落とさないようにする
+UV_PYTHON_DOWNLOADS = "never"
+
+[tasks.setup]
+description = "依存関係をインストールする(uv.lock どおり)"
+run = "uv sync --locked"
+
+[tasks.format]
+description = "整形と自動修正"
+run = ["uv run --locked ruff format .", "uv run --locked ruff check --fix ."]
+
+[tasks.format-check]
+description = "整形漏れを検出する"
+run = "uv run --locked ruff format --check ."
+
+[tasks.lint]
+description = "静的解析(ruff。セキュリティ系ルール S を含む)"
+run = "uv run --locked ruff check ."
+
+[tasks.typecheck]
+description = "型検査(mypy strict)"
+run = "uv run --locked mypy"
+
+[tasks.test]
+description = "テスト"
+run = "uv run --locked pytest"
+
+[tasks.security]
+description = "依存パッケージの既知脆弱性を検査する"
+run = "uv export --quiet --locked --no-dev --no-emit-project --no-hashes --format requirements-txt -o .audit-requirements.txt && uv run --locked pip-audit --strict -r .audit-requirements.txt; rc=$?; rm -f .audit-requirements.txt; exit $rc"

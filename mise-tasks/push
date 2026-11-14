@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="現在のブランチを origin へ push する(main への直接 push は拒否)"
+#MISE dir="{{config_root}}"
+set -euo pipefail
+source scripts/lib/vcs.sh
+
+vcs_require_feature_branch
+git push --set-upstream origin "$(vcs_current_branch)"
