@@ -32,7 +32,10 @@ jobs:
           working_directory: infra
       - name: format-check
         run: mise run format-check
+      # 1 回の実行ですべての検査結果を見られるよう、前段が失敗しても続ける。
       - name: lint
+        if: ${{ !cancelled() }}
         run: mise run lint
       - name: security
+        if: ${{ !cancelled() }}
         run: mise run security
