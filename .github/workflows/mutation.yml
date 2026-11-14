@@ -1,0 +1,53 @@
+# ミューテーションテスト(任意実行。docs/testing-strategy.md 6 章)
+# 実行するかは人間が決める。次のどちらかで動く。
+#   - PR に mutation-test ラベルを付ける(PR で変更したファイルだけが対象)
+#   - Actions の画面から手動で実行する(対象を選べる)
+# 何を検査するかは mise.toml(mise run test:mutation)が決める。
+name: mutation
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "対象。changed = 既定ブランチから変更したファイルだけ / all = 全体"
+        type: choice
+        options: [changed, all]
+        default: changed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutation:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'mutation-test'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+      # PR ならマージ先、手動実行なら main との差分を見る
+      AIDD_BASE_BRANCH: ${{ github.base_ref || 'main' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # 既定ブランチとの差分を取るため
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+        with:
+          version: 2026.11.7
+      - run: mise run setup
+      - name: mise run test:mutation
+        env:
+          SCOPE: ${{ inputs.scope || 'changed' }}
+        run: |
+          if [[ "$SCOPE" == "all" ]]; then
+            mise run test:mutation --all
+          else
+            mise run test:mutation
+          fi

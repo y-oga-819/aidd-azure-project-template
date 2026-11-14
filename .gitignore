@@ -16,3 +16,6 @@ __pycache__/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# ミューテーションテスト(mutmut)の作業ディレクトリ
+mutants/

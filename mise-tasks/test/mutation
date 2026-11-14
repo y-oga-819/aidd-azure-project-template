@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+#MISE description="ミューテーションテスト(任意実行)。既定では既定ブランチから変更したファイルだけを対象にする"
+#MISE dir="{{config_root}}"
+#USAGE flag "--all" help="変更したファイルだけでなく、全体を対象にする(時間がかかる)"
+set -euo pipefail
+
+# 各コンポーネントの test-mutation タスクを呼ぶ。コンポーネントを足すときは、その mise.toml に定義するだけでよい
+tasks="$(mise tasks ls --all --json | python3 -c 'import json,sys; print("\n".join(t["name"] for t in json.load(sys.stdin) if t["name"].endswith(":test-mutation")))')"
+if [[ -z "$tasks" ]]; then
+  echo "test-mutation タスクを持つコンポーネントがありません" >&2
+  exit 1
+fi
+
+scope="changed"
+[[ "${usage_all:-false}" == "true" ]] && scope="all"
+
+failed=0
+while IFS= read -r task; do
+  AIDD_MUTATION_SCOPE="$scope" mise run --quiet "$task" || failed=1
+done <<<"$tasks"
+exit $failed
