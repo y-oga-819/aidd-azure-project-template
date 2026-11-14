@@ -116,7 +116,7 @@ dev の初回はこれで影響を確認してから `Default` に切り替え�
 ### 検証済み
 
 - 組み込みポリシーの定義 ID・パラメーター・許可される効果（Azure/azure-policy リポジトリで確認）
-- `bicep lint` / `bicep build-params` による型検査と linter（CI の `infra-static`。警告もエラー扱い）
+- `bicep lint` / `bicep build-params` による型検査と linter（ルートの CI `mise run ci` が `//infra:lint` を実行。警告もエラー扱い）
 - checkov による静的検査（同上）。**ただし網羅性は低い**: checkov の Bicep パーサーは `import` やユーザー定義関数などの構文を読めず、
   CI 時点で 6 ファイルが「解析エラー」として検査対象外になっている（解析できた範囲で 19 件合格）。
   コンパイル後の ARM JSON も試したが、入れ子デプロイ内のリソースは検査されなかった。
