@@ -41,5 +41,6 @@ PR 操作の GitHub / Azure DevOps 切り替えは [docs/vcs-provider.md](docs/v
 
 - PR 概要のテンプレート: [docs/pull_request_template.md](docs/pull_request_template.md)
 - レビュアーの観点: [docs/review-guide.md](docs/review-guide.md)
+- 長く効く判断（ADR）: [docs/adr/](docs/adr/)
 
 テンプレートを `docs/` に置いているのは、GitHub(直下 / `docs/` / `.github/` を探す)と Azure DevOps(`.azuredevops/` / `.vsts/` / `docs/` / 直下を探す)の両方が読む場所だからです。移行しても置き場所を変える必要はありません。

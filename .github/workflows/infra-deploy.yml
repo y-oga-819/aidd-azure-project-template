@@ -1,0 +1,53 @@
+# workload のデプロイ（手動実行）。
+# - GitHub Environment（dev / prd）の保護ルールで承認者を設定すること。
+# - Azure へのサインインは OIDC（シークレットなし）。bootstrap が作るデプロイ用マネージド ID を使う。
+# - 中身は mise タスクを呼ぶだけにして、Azure DevOps へ移行するときも同じコマンドを使えるようにする。
+name: infra-deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: デプロイ先
+        type: choice
+        options: [dev, prd]
+        default: dev
+      apply:
+        description: what-if の後にデプロイまで行う
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write # OIDC トークンの発行に必要
+
+concurrency:
+  group: infra-deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+  ENV: ${{ inputs.environment }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Environment 単位でフェデレーションしているので、この行がないとサインインできない。
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+        with:
+          version: 2026.11.7
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: static checks
+        run: mise run //infra:lint
+      - name: what-if
+        run: mise run //infra:whatif
+      - name: deploy
+        if: ${{ inputs.apply }}
+        run: mise run //infra:deploy
