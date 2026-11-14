@@ -20,7 +20,7 @@ param secretReaderPrincipalIds array = []
 @maxValue(90)
 param softDeleteRetentionInDays int = 90
 
-var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
+var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6' // gitleaks:allow 組み込みロール定義の ID（秘密情報ではない）
 
 resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: name

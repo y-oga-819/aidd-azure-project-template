@@ -15,7 +15,7 @@ var roleIds = {
   rbacAdministrator: 'f58310d9-a9f6-439a-9e8d-f62e7b41a168'
   // 以下はワークロードが必要とするロール。増やす場合はここを変更し、bootstrap を再実行する（= 人間のレビューを通す）。
   acrPull: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
-  keyVaultSecretsUser: '4633458b-17de-408a-b874-0445c86b69e6'
+  keyVaultSecretsUser: '4633458b-17de-408a-b874-0445c86b69e6' // gitleaks:allow 組み込みロール定義の ID（秘密情報ではない）
   monitoringMetricsPublisher: '3913510d-42f4-4e42-8a64-420c390055eb'
 }
 
