@@ -21,7 +21,7 @@
 2. `origin` を Azure Repos に向ける。`az repos` は `--detect true` で git remote から organization / project / repository を読む。
 3. ルートの `mise.toml` の `AIDD_VCS_PROVIDER` の既定値を `azure` にする。
 4. `azure-pipelines.yml` をパイプラインとして登録し、`main` のブランチポリシー「Build validation」に設定する(Azure Repos では YAML の `pr:` トリガーは効かない)。
-5. PR テンプレートを Azure Repos の探索場所(`.azuredevops/pull_request_template.md` など)にも置くか、`mise run pr -b <file>` で本文を渡す。
+5. PR テンプレートは `docs/pull_request_template.md` にあり、Azure Repos もこの場所を探すので移動は不要。
 
 ## 未検証の項目
 

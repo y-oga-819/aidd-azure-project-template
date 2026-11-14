@@ -23,7 +23,7 @@ if [[ "${usage_skip_check:-false}" != "true" ]]; then
 fi
 
 title="${usage_title:-$(git log -1 --format=%s)}"
-body_file="${usage_body_file:-.github/pull_request_template.md}"
+body_file="${usage_body_file:-docs/pull_request_template.md}"
 if [[ ! -f "$body_file" ]]; then
   echo "本文ファイルが見つかりません: $body_file" >&2
   exit 1
