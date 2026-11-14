@@ -1,0 +1,38 @@
+# infra の静的検査（Azure の認証情報なし）。
+# 暫定: ルートの ci.yml（mise run check）が //infra:lint などを集めて実行するようになったら、このワークフローは削除する。
+name: infra-static
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra-static.yml"
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+
+permissions:
+  contents: read
+
+env:
+  # 子ディレクトリの mise.toml を信頼する（mise スレッドの ci.yml と同じ設定）。
+  MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+        with:
+          working_directory: infra
+      - name: format-check
+        run: mise run format-check
+      - name: lint
+        run: mise run lint
+      - name: security
+        run: mise run security
