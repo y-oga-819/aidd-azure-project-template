@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+#MISE description="check を流し、push して PR を作る(作成先は AIDD_VCS_PROVIDER)"
+#MISE dir="{{config_root}}"
+#USAGE flag "-t --title <title>" help="PR のタイトル。省略時は最新コミットの件名"
+#USAGE flag "-b --body-file <file>" help="PR 本文のファイル。省略時は PR テンプレート"
+#USAGE flag "--draft" help="ドラフトとして作る"
+#USAGE flag "--skip-check" help="事前の mise run check を飛ばす(緊急時のみ)"
+set -euo pipefail
+source scripts/lib/vcs.sh
+
+provider="$(vcs_provider)"
+base="$(vcs_base_branch)"
+branch="$(vcs_current_branch)"
+vcs_require_feature_branch
+
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "コミットされていない変更があります。コミットしてから実行してください" >&2
+  exit 1
+fi
+
+if [[ "${usage_skip_check:-false}" != "true" ]]; then
+  mise run check
+fi
+
+title="${usage_title:-$(git log -1 --format=%s)}"
+body_file="${usage_body_file:-.github/pull_request_template.md}"
+if [[ ! -f "$body_file" ]]; then
+  echo "本文ファイルが見つかりません: $body_file" >&2
+  exit 1
+fi
+draft="${usage_draft:-false}"
+
+mise run push
+
+case "$provider" in
+  github)
+    vcs_require_command gh "mise install を実行してください"
+    args=(--base "$base" --head "$branch" --title "$title" --body-file "$body_file")
+    [[ "$draft" == "true" ]] && args+=(--draft)
+    gh pr create "${args[@]}"
+    ;;
+  azure)
+    # 未検証: org / project / repository は git remote から自動検出させる(--detect)。
+    vcs_require_command az "Azure CLI と azure-devops 拡張を入れてください(docs/vcs-provider.md)"
+    az repos pr create \
+      --detect true \
+      --source-branch "$branch" \
+      --target-branch "$base" \
+      --title "$title" \
+      --description "$(cat "$body_file")" \
+      --draft "$draft" \
+      --output table
+    ;;
+esac
