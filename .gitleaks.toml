@@ -1,0 +1,14 @@
+# gitleaks の設定。既定ルールをそのまま使い、誤検知だけを値で許可する。
+# 行単位の `gitleaks:allow` ではなく値で許可するのは、gitleaks が履歴も走査するため
+# （過去のコミットにも効き、rebase や squash の影響も受けない）。
+# 許可を足すときは、その値が秘密情報でない理由をコメントで必ず残すこと。
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "公開されている Azure 組み込みロール定義の ID"
+regexes = [
+  # Key Vault Secrets User（全テナント共通の組み込みロール ID）
+  '''4633458b-17de-408a-b874-0445c86b69e6''',
+]
