@@ -1,0 +1,135 @@
+# infra（Bicep）用のツールとタスク。
+# ルートの mise.toml（monorepo_root）から自動で取り込まれ、外からは //infra:<task> で呼べる。
+#
+# 共通名のタスク（format / format-check / lint / security）は Azure の認証情報なしで動く静的検査だけにする。
+# ルートの `mise run check` がこれらを集めて CI で実行する。
+# Azure に接続するタスクは whatif / deploy / bootstrap など別の名前にする。
+
+[tools]
+"aqua:Azure/bicep" = "0.48.1"
+"aqua:bridgecrewio/checkov" = "3.4.4"
+
+[env]
+# 既定の環境。`ENV=prd mise run //infra:whatif` のように上書きする。
+ENV = "dev"
+LOCATION = "japaneast"
+WORKLOAD = "aidd"
+
+# ---------------------------------------------------------------------------
+# 静的検査（認証不要）
+# ---------------------------------------------------------------------------
+
+[tasks.format]
+description = "Bicep ファイルを整形する"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+find . -name '*.bicep' -o -name '*.bicepparam' | sort | while read -r f; do
+  bicep format "$f"
+done
+"""
+
+[tasks.format-check]
+description = "Bicep ファイルが整形済みか確認する"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+status=0
+while read -r f; do
+  if ! bicep format --stdout "$f" | diff -u "$f" - >/dev/null; then
+    echo "未整形: $f（mise run //infra:format で直せます）"
+    status=1
+  fi
+done < <(find . -name '*.bicep' -o -name '*.bicepparam' | sort)
+exit $status
+"""
+
+[tasks.lint]
+description = "Bicep のビルドと linter を実行する（警告もエラー扱い）"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+out=$(mktemp -d)
+trap 'rm -rf "$out"' EXIT
+status=0
+# エントリポイントと全モジュールを lint する
+while read -r f; do
+  echo "lint: $f"
+  if ! bicep lint "$f" 2>&1 | tee "$out/lint.log"; then status=1; fi
+  if grep -qE ': (Warning|Error) ' "$out/lint.log"; then status=1; fi
+done < <(find . -name '*.bicep' | sort)
+# パラメーターファイルがテンプレートと整合しているかをビルドで確認する
+while read -r p; do
+  echo "build-params: $p"
+  if ! bicep build-params "$p" --outfile "$out/params.json" 2>&1 | tee "$out/build.log"; then status=1; fi
+  if grep -qE ': (Warning|Error) ' "$out/build.log"; then status=1; fi
+done < <(find . -name '*.bicepparam' | sort)
+exit $status
+"""
+
+[tasks.security]
+description = "checkov で IaC のセキュリティ設定を静的検査する"
+run = "checkov --directory . --framework bicep --config-file .checkov.yaml"
+
+# ---------------------------------------------------------------------------
+# Azure に接続するタスク（az login 済み、または CI の OIDC ログイン済みが前提）
+# ---------------------------------------------------------------------------
+
+[tasks.bootstrap]
+description = "【特権者が手動で実行】RG・CI 用 ID・Policy を作成する（サブスクリプション スコープ）"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+az deployment sub create \
+  --name "bootstrap-${WORKLOAD}-${ENV}" \
+  --location "$LOCATION" \
+  --template-file bootstrap/main.bicep \
+  --parameters "bootstrap/params/${ENV}.bicepparam"
+"""
+
+[tasks.whatif]
+description = "workload の変更内容を事前確認する（what-if）"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+az deployment group what-if \
+  --resource-group "rg-${WORKLOAD}-${ENV}" \
+  --template-file workload/main.bicep \
+  --parameters "workload/params/${ENV}.bicepparam"
+"""
+
+[tasks.deploy]
+description = "workload をデプロイスタックとしてデプロイする"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+# デプロイスタックを使い、コードから消えたリソースを検出・削除できるようにする。
+# DENY_SETTINGS_MODE=denyDelete などにすると、ポータルからの手動削除も拒否できる（未検証）。
+az stack group create \
+  --name "stack-${WORKLOAD}-${ENV}" \
+  --resource-group "rg-${WORKLOAD}-${ENV}" \
+  --template-file workload/main.bicep \
+  --parameters "workload/params/${ENV}.bicepparam" \
+  --action-on-unmanage "${ACTION_ON_UNMANAGE:-detachAll}" \
+  --deny-settings-mode "${DENY_SETTINGS_MODE:-none}" \
+  --yes
+"""
+
+[tasks.approve-private-link]
+description = "Front Door からの Private Link 接続を Container Apps 環境側で承認する"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+rg="rg-${WORKLOAD}-${ENV}"
+cae="cae-${WORKLOAD}-${ENV}"
+cae_id=$(az containerapp env show --resource-group "$rg" --name "$cae" --query id --output tsv)
+pending=$(az network private-endpoint-connection list --id "$cae_id" \
+  --query "[?properties.privateLinkServiceConnectionState.status=='Pending'].id" --output tsv)
+if [ -z "$pending" ]; then
+  echo "承認待ちの接続はありません"
+  exit 0
+fi
+for id in $pending; do
+  az network private-endpoint-connection approve --id "$id" --description "Approved for Front Door"
+done
+"""
