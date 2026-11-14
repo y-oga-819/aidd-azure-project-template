@@ -1,6 +1,6 @@
 # ADR-0002: アプリの実行基盤に Azure App Service（コンテナ）を採用する
 
-- 状態: 提案（2026-11-14）
+- 状態: 採用（2026-11-14）
 - 関連: [ADR-0003](0003-single-public-entry.md)、[infra/docs/azure-infra-guardrails.md](../../infra/docs/azure-infra-guardrails.md)
 
 ## 背景（なぜ決める必要があるか）

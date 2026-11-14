@@ -1,6 +1,6 @@
 # ADR-0003: 入口を Front Door 1 つにし、フロントとバックを 1 つのコンテナ・1 つの App Service にまとめる
 
-- 状態: 提案（2026-11-14）
+- 状態: 採用（2026-11-14）
 - 関連: [ADR-0002](0002-hosting-app-service.md)、[infra/docs/azure-infra-guardrails.md](../../infra/docs/azure-infra-guardrails.md)（G1）
 
 ## 背景（なぜ決める必要があるか）
