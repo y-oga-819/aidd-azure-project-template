@@ -1,0 +1,36 @@
+# tools(開発の進め方を支える補助ツール)のツールとタスク。外からは //tools:<task> で呼べる。
+# 利用者向けの入口はルートの mise-tasks/docs/spec と mise-tasks/plan/verify。
+[tools]
+python = "3.13.18"
+uv = "0.13.8"
+
+[env]
+UV_PYTHON_DOWNLOADS = "never"
+
+[tasks.setup]
+description = "依存関係をインストールする(uv.lock どおり)"
+run = "uv sync --locked"
+
+[tasks.format]
+description = "整形と自動修正"
+run = ["uv run --locked ruff format .", "uv run --locked ruff check --fix ."]
+
+[tasks.format-check]
+description = "整形漏れを検出する"
+run = "uv run --locked ruff format --check ."
+
+[tasks.lint]
+description = "静的解析"
+run = "uv run --locked ruff check ."
+
+[tasks.typecheck]
+description = "型検査(mypy strict)"
+run = "uv run --locked mypy"
+
+[tasks.test]
+description = "テスト"
+run = "uv run --locked pytest"
+
+[tasks.cli]
+description = "aidd_spec の CLI を実行する(ルートの docs:spec / plan:verify から呼ばれる)"
+run = "uv run --locked python -m aidd_spec"
