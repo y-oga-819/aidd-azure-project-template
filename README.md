@@ -13,6 +13,8 @@ mise run check      # CI と同じ検査一式(format-check / lint / typecheck /
 mise run format     # 整形
 mise run pr -b <本文>  # check → push → PR 作成(本文は docs/pull_request_template.md の形)
 mise run pr-view    # 現在のブランチの PR と CI の状況
+mise run docs:spec  # テストから仕様一覧を出す(テストが仕様の正本)
+mise run plan:verify <計画>  # 計画のテストケース一覧とテストを照合する
 mise tasks --all    # タスク一覧
 ```
 
@@ -22,7 +24,8 @@ mise tasks --all    # タスク一覧
 | --- | --- |
 | `mise.toml` | 共通ツールと集約タスク(`check` など) |
 | `backend/` | Python バックエンド。`backend/mise.toml` に専用ツールとタスク |
-| `mise-tasks/` | push / PR 作成などの VCS 操作タスク |
+| `tools/` | 開発の進め方を支える補助ツール(仕様一覧の生成、計画との照合) |
+| `mise-tasks/` | push / PR 作成などの VCS 操作タスク、仕様一覧のタスク |
 | `.github/workflows/ci.yml` | GitHub Actions。`mise run ci` を呼ぶだけ |
 | `azure-pipelines.yml` | 同じ形の Azure Pipelines 定義(未検証) |
 
