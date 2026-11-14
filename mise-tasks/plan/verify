@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#MISE description="計画のテストケース一覧と、テストを照合する(テストは実行しない)"
+#MISE dir="{{config_root}}"
+#USAGE arg "<plan>" help="計画のファイル(docs/templates/plan.md の形)"
+set -euo pipefail
+source scripts/lib/spec.sh
+
+plan="$(realpath "${usage_plan}")"
+collected="$(spec_collect_all)"
+trap 'rm -rf "$collected"' EXIT
+
+mise run --quiet //tools:cli -- verify "$plan" "$collected"/*.json
