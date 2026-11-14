@@ -2,7 +2,9 @@
 
 Angular（フロントエンド）と Python（バックエンド）を動かす Azure 基盤の IaC（Bicep）。
 
-- なぜ Bicep か: [docs/adr-0001-iac-tool.md](docs/adr-0001-iac-tool.md)
+- なぜ Bicep か: [ADR-0001](../docs/adr/0001-iac-tool.md)
+- なぜ Container Apps か: [ADR-0002](../docs/adr/0002-hosting-container-apps.md)
+- なぜ外部公開を web だけにし、api を nginx 経由にするか: [ADR-0003](../docs/adr/0003-single-public-entry.md)
 - 何を守っているか・未検証事項: [docs/guardrails.md](docs/guardrails.md)
 
 ## 構成

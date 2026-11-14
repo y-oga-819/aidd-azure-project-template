@@ -38,23 +38,10 @@ Front Door Premium + WAF (Prevention)
 Log Analytics / Application Insights（全リソースの診断ログ・テレメトリ）
 ```
 
-### なぜ Container Apps か（別案との比較）
+### この構成を選んだ理由
 
-| 案 | 長所 | 短所 | 判断 |
-| --- | --- | --- | --- |
-| **Container Apps（採用）** | Angular も Python もコンテナで同じ扱い。VNet 内部モード、マネージド ID、Key Vault 参照が標準。スケール to 0 | ACR の閉域化に伴う push 経路の課題（後述） | 採用 |
-| App Service | 成熟、Python のビルトイン実行環境 | フロントとバックで別の仕組みになりやすい。閉域化に Private Endpoint が個別に必要 | 次点 |
-| Static Web Apps + Functions | フロントの配信が簡単 | 閉域化の選択肢が少なく、Python API の自由度が低い | 不採用 |
-| AKS | 何でもできる | 運用負荷が大きく、テンプレートの目的に対して過剰 | 不採用 |
-
-### なぜ api をブラウザから直接呼ばせないか
-
-Angular の SPA はブラウザで動くため、通常は API も外部公開が必要になる。
-ここでは web（nginx）が `/api` を環境内部の api にプロキシする構成にし、**外部公開されるアプリを 1 つに限定**した。
-こうすると Policy で「web 以外の外部公開を Deny」と書ける（G1）。
-AI が新しいアプリを追加して `external: true` にしても、デプロイが失敗する。
-
-nginx 側の設定（`BACKEND_BASE_URL` 環境変数を使ったプロキシ）はアプリ側のスレッドで実装する。
+- 実行基盤を Container Apps にした理由と別案: [ADR-0002](../../docs/adr/0002-hosting-container-apps.md)
+- 外部公開を web だけにし、api を nginx 経由で呼ぶ理由と別案: [ADR-0003](../../docs/adr/0003-single-public-entry.md)
 
 ## 3. 権限の設計
 
