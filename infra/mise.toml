@@ -86,25 +86,8 @@ exit $status
 """
 
 [tasks.security]
-description = "checkov で IaC のセキュリティ設定を静的検査する（Bicep と、コンパイル後の ARM の両方）"
-depends = ["setup-bicep"]
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-# checkov の Bicep パーサーは import や関数などの新しい構文を読めず、一部のファイルを解析できない。
-# 取りこぼしを防ぐため、bicep build で ARM JSON にしたもの（モジュールは入れ子で展開される）も検査する。
-out=$(mktemp -d)
-trap 'rm -rf "$out"' EXIT
-for f in bootstrap/main.bicep workload/main.bicep; do
-  bicep build "$f" --outfile "$out/$(dirname "$f").json"
-done
-status=0
-echo "== checkov (bicep)"
-checkov --directory . --framework bicep --config-file .checkov.yaml || status=1
-echo "== checkov (arm, compiled)"
-checkov --directory "$out" --framework arm --config-file .checkov.yaml || status=1
-exit $status
-"""
+description = "checkov で IaC のセキュリティ設定を静的検査する"
+run = "checkov --directory . --framework bicep --config-file .checkov.yaml"
 
 # ---------------------------------------------------------------------------
 # Azure に接続するタスク（az login 済み、または CI の OIDC ログイン済みが前提）

@@ -1,5 +1,7 @@
 # checkov の設定。Bicep の静的検査に使う。
 # 抑止（skip-check）を追加するときは、理由をコメントで必ず残す。
+framework:
+  - bicep
 compact: true
 quiet: true
 skip-check:
