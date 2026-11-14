@@ -1,7 +1,7 @@
 # ADR-0001: IaC ツールに Bicep を採用する
 
 - 状態: 提案（2026-11-14）
-- 関連: [guardrails.md](guardrails.md)
+- 関連: [infra/docs/guardrails.md](../../infra/docs/guardrails.md)
 
 ## 背景（なぜ決める必要があるか）
 
