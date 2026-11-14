@@ -9,7 +9,7 @@ AI が書いたアプリコードや IaC がデプロイされても、次が常
 
 | # | 受け入れ条件 | 主に効いている仕組み |
 | --- | --- | --- |
-| G1 | インターネットから届くのは Front Door (WAF) 経由だけ。アプリ（web / api）に直接は届かない | アプリの `publicNetworkAccess: Disabled` + Front Door の Private Link、Policy `app-no-public-network` |
+| G1 | インターネットから届くのは Front Door (WAF) 経由だけ。アプリに直接は届かない | アプリの `publicNetworkAccess: Disabled` + Front Door の Private Link、Policy `app-no-public-network` |
 | G2 | Key Vault・ACR にパブリックネットワークから届かない | `publicNetworkAccess: Disabled` + Private Endpoint、Policy `kv-no-public-network` / `acr-no-public-network` |
 | G3 | コードや設定にシークレットを置かない | マネージド ID、Key Vault 参照、ACR 管理者ユーザー無効、FTP / SCM の基本認証無効、App Insights / Log Analytics のローカル認証無効 |
 | G4 | 各 ID は必要な権限だけを持つ | アプリごとの ID、リソーススコープのロール割り当て、CI の付与可能ロールを ABAC 条件で制限 |
@@ -23,11 +23,10 @@ AI が書いたアプリコードや IaC がデプロイされても、次が常
     │ HTTPS
     ▼
 Front Door Premium + WAF (Prevention)
-    │ Private Link（/api/* → api、それ以外 → web）
+    │ Private Link（全パスをアプリへ）
     ▼
-App Service プラン（Linux コンテナ、1 つに相乗り）
-  ├─ web (nginx で Angular を配信)  publicNetworkAccess: Disabled
-  └─ api (Python)                    publicNetworkAccess: Disabled
+App Service プラン（Linux コンテナ）
+  └─ app（1 コンテナ: Angular の静的ファイル + Python の API /api）  publicNetworkAccess: Disabled
         │ VNet 統合（送信・イメージのプルはすべて VNet 経由）
         ▼
 ┌──────────────── VNet ─────────────────────────────────────────┐
@@ -45,7 +44,7 @@ Log Analytics / Application Insights（全リソースの診断ログ・テレ�
 ### この構成を選んだ理由
 
 - 実行基盤を App Service にした理由と別案: [ADR-0002](../../docs/adr/0002-hosting-app-service.md)
-- 入口を Front Door 1 つにし、/api を Front Door で振り分ける理由と別案: [ADR-0003](../../docs/adr/0003-single-public-entry.md)
+- 入口を Front Door 1 つにし、フロントとバックを 1 コンテナにまとめる理由と別案: [ADR-0003](../../docs/adr/0003-single-public-entry.md)
 
 ## 3. 権限の設計
 
@@ -70,8 +69,7 @@ Log Analytics / Application Insights（全リソースの診断ログ・テレ�
 
 | ID | 付与ロール | スコープ |
 | --- | --- | --- |
-| `id-<w>-<env>-web` | AcrPull | ACR |
-| `id-<w>-<env>-api` | AcrPull / Key Vault Secrets User / Monitoring Metrics Publisher | ACR / Key Vault / App Insights |
+| `id-<w>-<env>-app` | AcrPull / Key Vault Secrets User / Monitoring Metrics Publisher | ACR / Key Vault / App Insights |
 
 ## 4. Azure Policy
 
@@ -108,8 +106,8 @@ dev の初回はこれで影響を確認してから `Default` に切り替え�
 
 ## 5. ログと監視
 
-- Log Analytics に Key Vault / ACR / App Service（web / api）/ Front Door の診断ログ（`allLogs`）とメトリックを集約。
-- Application Insights はワークスペースベース、ローカル認証無効。api はマネージド ID で送信する
+- Log Analytics に Key Vault / ACR / App Service / Front Door の診断ログ（`allLogs`）とメトリックを集約。
+- Application Insights はワークスペースベース、ローカル認証無効。アプリはマネージド ID で送信する
   （`APPLICATIONINSIGHTS_AUTHENTICATION_STRING` を設定済み）。
 - アラート（WAF のブロック急増、Key Vault の認可失敗など）は未定義。「6. 今後」を参照。
 
@@ -133,8 +131,7 @@ dev の初回はこれで影響を確認してから `Default` に切り替え�
 | --- | --- |
 | bootstrap 全体 | サブスクリプション スコープのデプロイ、ABAC 条件の書式 |
 | ABAC 条件付きの RBAC 管理者 | 条件式の構文と、PrincipalType 条件が期待どおり効くか |
-| Front Door → App Service の Private Link | 構成自体は既存プロジェクトで実績あり。このテンプレートの Bicep（`groupId: sites`、2 オリジン、`approve-private-link` タスク）としては未確認 |
-| Front Door のルート振り分け | `/api/*` と `/*` の 2 ルートで、`/api/*` が優先されるか |
+| Front Door → App Service の Private Link | 構成自体は既存プロジェクトで実績あり。このテンプレートの Bicep（`groupId: sites`、`approve-private-link` タスク）としては未確認 |
 | 閉域 ACR からのイメージのプル | `vnetImagePullEnabled` + ユーザー割り当て ID（`acrUserManagedIdentityID`）で、Private Endpoint 経由のプルが成功するか |
 | Key Vault 参照のシークレット | 初回デプロイ時、ロール割り当ての反映遅延で失敗する可能性 |
 | `kv-resource-logs` の `requiredRetentionDays: 0` | 保持日数を診断設定で持たない構成で準拠と判定されるか |
@@ -147,7 +144,7 @@ dev の初回はこれで影響を確認してから `Default` に切り替え�
   ただし ACR はパブリックアクセス無効 + `networkRuleBypassOptions: None` のため、GitHub ホストランナーからはイメージを push できない。
   別案は (a) VNet 内のセルフホストランナー / Azure DevOps のマネージド DevOps プール、(b) ACR Tasks のエージェントプール、(c) dev のみ CI の送信元 IP を許可。
   アプリの CD を作るときに決める（推奨は (a)。Azure DevOps 移行とも相性が良い）。
-- **インフラの再デプロイでイメージが巻き戻る**: イメージは環境変数 `FRONTEND_IMAGE` / `BACKEND_IMAGE` で `//infra:deploy` に渡す。
+- **インフラの再デプロイでイメージが巻き戻る**: イメージは環境変数 `APP_IMAGE` で `//infra:deploy` に渡す。
   渡し忘れるとサンプルイメージに戻るので、CD では必ず同じ変数を渡す。
 - **送信方向の制御がない**: App Service からインターネットへの送信は制限していない。Azure Firewall + UDR で制御できるが、コスト（月数万円〜）が大きい。
 - **Log Analytics の閉域化（AMPLS）は未対応**: 取り込み・クエリはパブリックエンドポイント経由（Entra ID 認証のみ）。
