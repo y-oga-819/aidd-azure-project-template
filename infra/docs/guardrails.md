@@ -9,9 +9,9 @@ AI が書いたアプリコードや IaC がデプロイされても、次が常
 
 | # | 受け入れ条件 | 主に効いている仕組み |
 | --- | --- | --- |
-| G1 | インターネットから届くのは Front Door (WAF) 経由のフロントエンドだけ | 内部モードの Container Apps 環境、Policy `ca-no-external-ingress` / `cae-internal-only` |
-| G2 | Key Vault・ACR にパブリックネットワークから届かない | `publicNetworkAccess: Disabled` + Private Endpoint、Policy `kv-no-public-network` / `acr-no-public-network` |
-| G3 | コードや設定にシークレットを置かない | マネージド ID、Key Vault 参照、ACR 管理者ユーザー無効、App Insights / Log Analytics のローカル認証無効 |
+| G1 | インターネットから届くのは Front Door (WAF) 経由だけ。アプリ（web / api）に直接は届かない | アプリの `publicNetworkAccess: Disabled` + Front Door の Private Link、Policy `app-no-public-network` |
+| G2 | Key Vault にパブリックネットワークから届かない | `publicNetworkAccess: Disabled` + Private Endpoint、Policy `kv-no-public-network` |
+| G3 | コードや設定にシークレットを置かない | マネージド ID、Key Vault 参照、FTP / SCM の基本認証無効、App Insights / Log Analytics のローカル認証無効 |
 | G4 | 各 ID は必要な権限だけを持つ | アプリごとの ID、リソーススコープのロール割り当て、CI の付与可能ロールを ABAC 条件で制限 |
 | G5 | CI（= AI の変更が通る経路）はガードレール自体を変更できない | Policy と CI 用 ID は bootstrap（特権者）で管理、CI 用 ID は ops RG に分離 |
 | G6 | 何が起きたか後から追える | 全リソースの診断ログを Log Analytics へ、アプリは Application Insights へ |
@@ -23,25 +23,28 @@ AI が書いたアプリコードや IaC がデプロイされても、次が常
     │ HTTPS
     ▼
 Front Door Premium + WAF (Prevention)
-    │ Private Link
+    │ Private Link（/api/* → api、それ以外 → web）
     ▼
+App Service プラン（Linux、1 つに相乗り）
+  ├─ web (Node で Angular の静的ファイルを配信)  publicNetworkAccess: Disabled
+  └─ api (Python)                                 publicNetworkAccess: Disabled
+        │ VNet 統合（送信はすべて VNet 経由）
+        ▼
 ┌──────────────── VNet ─────────────────────────────────────────┐
-│ snet-cae: Container Apps 環境（内部モード・パブリック無効）     │
-│   ├─ web (Angular / nginx)  ingress.external = true            │
-│   │     └─ /api を内部でリバースプロキシ                        │
-│   └─ api (Python)           ingress.external = false           │
-│                                                               │
-│ snet-pe: Private Endpoint（NSG で snet-cae からの 443 のみ許可） │
-│   ├─ Key Vault                                                 │
-│   └─ Container Registry                                        │
+│ snet-app: App Service の VNet 統合（Microsoft.Web/serverFarms） │
+│ snet-pe : Private Endpoint（NSG で snet-app からの 443 のみ許可）│
+│   └─ Key Vault                                                 │
 └───────────────────────────────────────────────────────────────┘
 Log Analytics / Application Insights（全リソースの診断ログ・テレメトリ）
 ```
 
+外部から届く経路は `workload/main.bicep` の Front Door の `origins` 配列に列挙したものだけ。
+経路を増やす変更は、この配列の差分としてレビューで必ず見えるようにしている。
+
 ### この構成を選んだ理由
 
-- 実行基盤を Container Apps にした理由と別案: [ADR-0002](../../docs/adr/0002-hosting-container-apps.md)
-- 外部公開を web だけにし、api を nginx 経由で呼ぶ理由と別案: [ADR-0003](../../docs/adr/0003-single-public-entry.md)
+- 実行基盤を App Service にした理由と別案: [ADR-0002](../../docs/adr/0002-hosting-app-service.md)
+- 入口を Front Door 1 つにし、/api を Front Door で振り分ける理由と別案: [ADR-0003](../../docs/adr/0003-single-public-entry.md)
 
 ## 3. 権限の設計
 
@@ -56,7 +59,7 @@ Log Analytics / Application Insights（全リソースの診断ログ・テレ�
 
 - **Contributor（ワークロード RG）**: リソースの作成・更新。ロール割り当てと Policy は変更できない。
 - **Role Based Access Control Administrator（ワークロード RG、条件付き）**:
-  AcrPull / Key Vault Secrets User / Monitoring Metrics Publisher を、ServicePrincipal（マネージド ID）に付与・削除することだけを許可。
+  Key Vault Secrets User / Monitoring Metrics Publisher を、ServicePrincipal（マネージド ID）に付与・削除することだけを許可。
   付与可能なロールを増やすには `bootstrap/modules/deployer-roles.bicep` の変更（= 人間のレビュー）が必要。
 - **ops RG には権限なし**: CI 用 ID 自身をワークロード RG に置くと、CI が自分の ID に別リポジトリのフェデレーション資格情報を足せてしまうため分離した。
 - **OIDC の subject は GitHub Environment 単位**: `repo:<owner>/<repo>:environment:<env>`。
@@ -66,8 +69,8 @@ Log Analytics / Application Insights（全リソースの診断ログ・テレ�
 
 | ID | 付与ロール | スコープ |
 | --- | --- | --- |
-| `id-<w>-<env>-web` | AcrPull | ACR |
-| `id-<w>-<env>-api` | AcrPull / Key Vault Secrets User / Monitoring Metrics Publisher | ACR / Key Vault / App Insights |
+| `id-<w>-<env>-web` | なし（静的ファイルの配信だけなので） | - |
+| `id-<w>-<env>-api` | Key Vault Secrets User / Monitoring Metrics Publisher | Key Vault / App Insights |
 
 ## 4. Azure Policy
 
@@ -81,22 +84,27 @@ Log Analytics / Application Insights（全リソースの診断ログ・テレ�
 | kv-rbac-only | Deny | Key Vault のアクセスポリシーモデル |
 | kv-purge-protection | Deny | 消去保護なしの Key Vault |
 | kv-resource-logs | AuditIfNotExists | Key Vault の診断ログ |
-| acr-no-public-network | Deny | ACR のパブリックアクセス |
-| acr-no-admin-user | Deny | ACR の管理者ユーザー |
-| acr-no-anonymous-pull | Deny | ACR の匿名プル |
-| cae-vnet-injection | Deny | VNet 注入なしの Container Apps 環境 |
-| cae-internal-only | Deny | 内部モードでない Container Apps 環境 |
-| ca-no-external-ingress | Deny（web は除外） | Container App の外部公開 |
-| ca-https-only | Deny | HTTP を許可する Container App |
-| ca-managed-identity | Deny | マネージド ID のない Container App |
+| app-no-public-network | Deny | App Service のパブリックアクセス |
+| app-https-only | Deny | HTTP を許可する App Service |
+| asp-private-link-sku | Deny | Private Link に対応しない SKU（Free / Shared）のプラン |
+| app-private-link | AuditIfNotExists | Private Link のない App Service |
+| app-latest-tls | AuditIfNotExists | 最新でない TLS バージョン |
+| app-ftps-only | AuditIfNotExists | FTPS 以外の FTP |
+| app-no-remote-debugging | AuditIfNotExists | リモートデバッグ |
+| app-no-ftp-basic-auth | AuditIfNotExists | FTP の基本認証 |
+| app-no-scm-basic-auth | AuditIfNotExists | SCM（Kudu）の基本認証 |
+| app-managed-identity | AuditIfNotExists | マネージド ID のない App Service |
 | fic-github-owner | Deny（Preview） | 他オーナーの GitHub リポジトリとのフェデレーション |
+
+App Service の TLS・FTP・基本認証・マネージド ID の組み込みポリシーは Deny を選べない（AuditIfNotExists のみ）。
+これらは IaC 側（`workload/modules/app-service.bicep`）で設定し、Policy は「後から崩れていないか」の監査に使う。
 
 `policyEnforcementMode` を `DoNotEnforce` にすると、拒否せずに準拠状況だけを評価できる。
 dev の初回はこれで影響を確認してから `Default` に切り替える。
 
 ## 5. ログと監視
 
-- Log Analytics に Key Vault / ACR / Container Apps 環境 / Front Door の診断ログ（`allLogs`）とメトリックを集約。
+- Log Analytics に Key Vault / App Service（web / api）/ Front Door の診断ログ（`allLogs`）とメトリックを集約。
 - Application Insights はワークスペースベース、ローカル認証無効。api はマネージド ID で送信する
   （`APPLICATIONINSIGHTS_AUTHENTICATION_STRING` を設定済み）。
 - アラート（WAF のブロック急増、Key Vault の認可失敗など）は未定義。「6. 今後」を参照。
@@ -121,9 +129,9 @@ dev の初回はこれで影響を確認してから `Default` に切り替え�
 | --- | --- |
 | bootstrap 全体 | サブスクリプション スコープのデプロイ、ABAC 条件の書式 |
 | ABAC 条件付きの RBAC 管理者 | 条件式の構文と、PrincipalType 条件が期待どおり効くか |
-| Front Door → Container Apps の Private Link | `groupId: managedEnvironments` での接続、`approve-private-link` タスクでの承認、内部モード + `publicNetworkAccess: Disabled` との組み合わせ |
-| Container Apps 環境の `publicNetworkAccess`（`@2025-07-01`） | 型定義には存在する（lint で確認）が、内部モードとの組み合わせで期待どおり動くか |
-| web → api の内部 HTTPS 呼び出し | 内部 FQDN と証明書の扱い |
+| Front Door → App Service の Private Link | 構成自体は既存プロジェクトで実績あり。このテンプレートの Bicep（`groupId: sites`、2 オリジン、`approve-private-link` タスク）としては未確認 |
+| Front Door のルート振り分け | `/api/*` と `/*` の 2 ルートで、`/api/*` が優先されるか |
+| web の起動コマンド | `pm2 serve /home/site/wwwroot --no-daemon --spa` で Angular のビルド成果物が配信されるか |
 | Key Vault 参照のシークレット | 初回デプロイ時、ロール割り当ての反映遅延で失敗する可能性 |
 | `kv-resource-logs` の `requiredRetentionDays: 0` | 保持日数を診断設定で持たない構成で準拠と判定されるか |
 | デプロイスタック | deny settings を有効にしたときの CI からの更新可否と必要権限 |
@@ -131,20 +139,20 @@ dev の初回はこれで影響を確認してから `Default` に切り替え�
 
 ## 7. 既知の制約
 
-- **ACR への push 経路がない**: パブリックアクセス無効 + `networkRuleBypassOptions: None` のため、GitHub ホストランナーからは push できない。
-  別案は (a) VNet 内のセルフホストランナー / Azure DevOps のマネージド DevOps プール、(b) ACR Tasks のエージェントプール、(c) dev のみ CI の送信元 IP を許可。
+- **アプリのデプロイ経路がない**: App Service はパブリックアクセス無効のため、デプロイ用の SCM（Kudu）サイトにも GitHub ホストランナーからは届かない。
+  別案は (a) VNet 内のセルフホストランナー / Azure DevOps のマネージド DevOps プール、(b) Storage に置いたパッケージから起動（Run From Package、Storage の閉域化が別途必要）、(c) dev のみ SCM サイトに CI の送信元 IP を許可。
   アプリの CD を作るときに決める（推奨は (a)。Azure DevOps 移行とも相性が良い）。
-- **送信方向の制御がない**: Container Apps からインターネットへの送信は制限していない。Azure Firewall + UDR で制御できるが、コスト（月数万円〜）が大きい。
+- **送信方向の制御がない**: App Service からインターネットへの送信は制限していない。Azure Firewall + UDR で制御できるが、コスト（月数万円〜）が大きい。
 - **Log Analytics の閉域化（AMPLS）は未対応**: 取り込み・クエリはパブリックエンドポイント経由（Entra ID 認証のみ）。
-- **コスト**: Front Door Premium と ACR Premium が固定費の大半を占める。dev で抑えたい場合は `enableFrontDoor = false`（VNet 内からのみアクセス）にできる。
+- **コスト**: Front Door Premium（月 330 ドル程度）が固定費の大半を占め、次が App Service プラン（P0v3 で月 60〜80 ドル程度、金額は目安）。dev で抑えたい場合は `enableFrontDoor = false`（VNet 内からのみアクセス）にできる。
 - **what-if とデプロイの承認タイミング**: 現在のワークフローは「承認 → what-if → デプロイ」の順で、承認者は what-if を見る前に承認する。
   what-if 専用の権限の小さい ID を別に用意すれば「what-if → 承認 → デプロイ」にできる。
 
 ## 8. 今後
 
 1. 実デプロイで「6. 未検証」を潰す（dev、`policyEnforcementMode = DoNotEnforce` から）
-2. ACR への push 経路を決める（7 を参照）
-3. アラート（WAF ブロック、Key Vault 認可失敗、コンテナ再起動）とアクショングループ
+2. アプリのデプロイ経路を決める（7 を参照）
+3. アラート（WAF ブロック、Key Vault 認可失敗、アプリの 5xx 増加）とアクショングループ
 4. データストア（PostgreSQL Flexible Server など）を Private Endpoint + Entra 認証で追加
 5. PSRule for Azure の導入（checkov で検査できていないファイルを含め、Well-Architected の観点で検査する）
 6. `infra/` と `bootstrap/` に CODEOWNERS を設定し、ガードレールの変更に人間のレビューを必須にする

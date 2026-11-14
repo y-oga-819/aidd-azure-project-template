@@ -3,8 +3,8 @@
 Angular（フロントエンド）と Python（バックエンド）を動かす Azure 基盤の IaC（Bicep）。
 
 - なぜ Bicep か: [ADR-0001](../docs/adr/0001-iac-tool.md)
-- なぜ Container Apps か: [ADR-0002](../docs/adr/0002-hosting-container-apps.md)
-- なぜ外部公開を web だけにし、api を nginx 経由にするか: [ADR-0003](../docs/adr/0003-single-public-entry.md)
+- なぜ App Service か: [ADR-0002](../docs/adr/0002-hosting-app-service.md)
+- なぜ入口を Front Door 1 つにし、/api を Front Door で振り分けるか: [ADR-0003](../docs/adr/0003-single-public-entry.md)
 - 何を守っているか・未検証事項: [docs/guardrails.md](docs/guardrails.md)
 
 ## 構成
@@ -13,7 +13,7 @@ Angular（フロントエンド）と Python（バックエンド）を動かす
 infra/
 ├── shared/naming.bicep      命名規約（bootstrap と workload で共有）
 ├── bootstrap/               特権者が手動で実行: RG、CI 用 ID、ロール、Policy
-├── workload/                CI が実行: ネットワーク、Container Apps、Key Vault、ACR、監視、Front Door
+├── workload/                CI が実行: ネットワーク、App Service、Key Vault、監視、Front Door
 ├── bicepconfig.json         linter 設定
 ├── .checkov.yaml            checkov 設定
 └── mise.toml                ツールとタスク

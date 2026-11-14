@@ -1,12 +1,11 @@
-# ADR-0003: 外部公開するアプリを web だけにし、api は web の nginx 経由で呼ぶ
+# ADR-0003: 入口を Front Door 1 つにし、/api は Front Door で api に振り分ける
 
 - 状態: 提案（2026-11-14）
-- 関連: [ADR-0002](0002-hosting-container-apps.md)、[infra/docs/guardrails.md](../../infra/docs/guardrails.md)（G1）
+- 関連: [ADR-0002](0002-hosting-app-service.md)、[infra/docs/guardrails.md](../../infra/docs/guardrails.md)（G1）
 
 ## 背景（なぜ決める必要があるか）
 
 Angular の SPA はブラウザで動くので、ブラウザから API に届く経路が必要になる。
-素直に作ると api も外部公開することになり、外部から届く口が 2 つになる。
 
 このプロジェクトでは AI がアプリやデプロイ定義を追加していく。
 「外部から届く口」が増えていくと、どれが意図した公開なのかをレビューで見分けにくくなる。
@@ -16,35 +15,38 @@ Angular の SPA はブラウザで動くので、ブラウザから API に届�
 
 | 案 | 内容 | 長所 | 短所 |
 | --- | --- | --- | --- |
-| **A. web の nginx が /api をプロキシ（採用）** | 外部公開は web だけ。web の nginx が `/api` を環境内部の api に転送する | 外部公開アプリが 1 つなので、Policy は「web 以外の外部公開を Deny」と書ける。CORS が不要（同一オリジン） | nginx の設定（プロキシ、タイムアウト、ヘッダー）を web 側で持つ必要がある。web が落ちると API も使えない |
-| B. Front Door のルーティングで振り分け | Front Door が `/api/*` を api に、それ以外を web に送る | アプリ側にプロキシ設定が不要 | api も Private Link の接続先として外部公開（`external = true`）が必要になり、Policy の例外が 2 つになる |
-| C. api も独立して外部公開 | ブラウザが api の URL を直接呼ぶ | 構成が最も単純 | 外部の口が 2 つ。CORS の設定が必要。Policy で外部公開を縛れない |
-| D. BFF（Backend for Frontend）を別アプリで立てる | 認証やセッションを BFF で扱い、api は内部のみ | 認証トークンをブラウザに置かずに済む | アプリが 1 つ増える。現時点の要件に対して過剰 |
+| **A. Front Door で振り分け（採用）** | web も api もパブリックアクセス無効。Front Door が Private Link で両方に接続し、`/api/*` を api、それ以外を web に送る | プロキシのコードが不要。ブラウザから見ると同一オリジンなので CORS も不要。Front Door + App Service の定番構成 | Front Door のオリジンが 2 つになる。経路の追加は Policy では止められず、IaC のレビューで見る |
+| B. web が /api を api に中継 | Front Door のオリジンは web だけ。web のサーバーが api に転送する | Front Door の経路が 1 つで単純 | web に中継用のサーバーコード（Node など）が必要。web が落ちると API も使えない |
+| C. api を独立して公開 | ブラウザが api の URL を直接呼ぶ | 構成が最も単純 | 外部の口が 2 つ。CORS の設定が必要 |
+| D. BFF（Backend for Frontend）を別アプリで立てる | 認証やセッションを BFF で扱う | 認証トークンをブラウザに置かずに済む | アプリが 1 つ増える。現時点の要件に対して過剰 |
 
 ## 決定
 
-**A を採用する。** 外部公開（`ingress.external = true`）を許すのは web だけで、
-Policy `ca-no-external-ingress` を Deny で割り当て、web のみ `notScopes` で除外する。
-AI が新しいアプリを追加して外部公開しようとしても、デプロイが失敗する。
+**A を採用する。**
+
+- すべてのアプリを `publicNetworkAccess: Disabled` にし、Policy `app-no-public-network`（Deny）で強制する。
+  AI が新しいアプリを追加して公開しようとしても、デプロイが失敗する。
+- 外部から届く経路は、`infra/workload/main.bicep` の Front Door の `origins` 配列に列挙したものだけになる。
+  経路を増やすには、この配列を変更する必要があり、差分としてレビューで必ず見える。
 
 アプリ側への影響:
 
 - Angular は API を相対パス（`/api/...`）で呼ぶ。API の URL を設定に持たない。
-- web のコンテナは nginx で、環境変数 `BACKEND_BASE_URL`（api の内部 FQDN）へ `/api` をプロキシする。
-- api は、web からの転送で来たリクエストだけを受ける前提で作る（ただし認証・認可は api 側でも必ず行う）。
+- api は `/api` 配下でルーティングする（Front Door はパスを書き換えずに転送する）。
+- 認証・認可は api 側で必ず行う（Front Door を通ることは認証の代わりにならない）。
 
 ## 批判的な再検討
 
-- **「B の方がアプリがシンプルでは？」**
-  アプリはシンプルになるが、ガードレールが弱くなる。B では api も外部公開が必要になり、
-  「外部公開してよいアプリ」が 2 つになる。アプリが増えるたびに例外が増える構造を避けたかった。
-  nginx のプロキシ設定は 10 行程度の定型で、AI が書けて、テストもしやすい。
-- **「web が単一障害点になるのでは？」**
-  そうなる。ただし web が落ちれば SPA 自体も配信されないので、可用性の観点で失うものは小さい。
-  web は複数レプリカで動かす（prd は `minReplicas = 1` 以上）。
+- **「当初の案（web の nginx が中継）の方が、外部公開が 1 アプリに絞れて強いのでは？」**
+  Container Apps のときは「web 以外の外部公開を Deny」と書けたので中継案に意味があった。
+  App Service では全アプリが閉域になり、外部から届くかどうかは Front Door の設定だけで決まる。
+  中継のコードを書いて保守するより、経路を `origins` 配列 1 か所に集めてレビューする方が単純で確実と判断した。
+- **「Front Door の経路の追加を機械で止められないのは弱いのでは？」**
+  そのとおりで、ここはレビュー頼みになる。`infra/` に CODEOWNERS を付けて人間のレビューを必須にする（guardrails.md 8 章）。
+  Front Door は CI がデプロイするワークロード側にあるので、Policy で固定するなら bootstrap 側に移す必要があり、今回はそこまでしない。
 - **「認証が入ったら D（BFF）が必要になるのでは？」**
-  可能性はある。トークンをブラウザに置きたくない要件が出たら、web の nginx を BFF に置き換える。
-  その場合も「外部公開は 1 つ」という方針は変わらない。
+  可能性はある。トークンをブラウザに置きたくない要件が出たら、`/api/*` の振り分け先を BFF に変える。
+  その場合も「入口は Front Door 1 つ」という方針は変わらない。
 
 ## 見直しの条件
 
