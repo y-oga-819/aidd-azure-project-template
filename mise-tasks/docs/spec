@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+#MISE description="テストから仕様一覧を生成する(テストは実行しない)"
+#MISE dir="{{config_root}}"
+#USAGE flag "-f --format <format>" default="markdown" help="出力形式" {
+#USAGE   choices "markdown" "json"
+#USAGE }
+#USAGE arg "[filter]" help="テストのパスかテスト ID に、この文字列を含むものだけを出す(例: pricing、SHIPPING)"
+#USAGE flag "-o --output <file>" help="出力先のファイル。省略時は標準出力"
+set -euo pipefail
+source scripts/lib/spec.sh
+
+collected="$(spec_collect_all)"
+trap 'rm -rf "$collected"' EXIT
+
+output="${usage_output:-}"
+if [[ -n "$output" ]]; then
+  output="$(realpath -m "$output")"
+  mise run --quiet //tools:cli -- render --format "${usage_format}" --filter "${usage_filter:-}" "$collected"/*.json >"$output"
+  echo "仕様一覧を $output に書き出しました" >&2
+else
+  mise run --quiet //tools:cli -- render --format "${usage_format}" --filter "${usage_filter:-}" "$collected"/*.json
+fi
