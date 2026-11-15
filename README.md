@@ -40,6 +40,7 @@ PR 操作の GitHub / Azure DevOps 切り替えは [docs/vcs-provider.md](docs/v
 - テスト戦略: [docs/testing-strategy.md](docs/testing-strategy.md)
 - 仕様の正本はテストにし、計画は使い捨てにする: [ADR-0005](docs/adr/0005-tests-as-specification.md)
 - テンプレート: [計画](docs/templates/plan.md)、[機能ごとの README](docs/templates/feature-readme.md)
+- 計画はプランニング skill(Claude Code で `/planning`)で作り、`docs/plans/` に置く: [.claude/skills/planning/](.claude/skills/planning/SKILL.md)
 
 ## PR の書き方とレビュー
 
