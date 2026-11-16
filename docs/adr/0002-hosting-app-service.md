@@ -1,7 +1,7 @@
 # ADR-0002: アプリの実行基盤に Azure App Service（コンテナ）を採用する
 
 - 状態: 採用（2026-11-14）
-- 関連: [ADR-0003](0003-single-public-entry.md)、[infra/docs/azure-infra-guardrails.md](../../infra/docs/azure-infra-guardrails.md)
+- 関連: [ADR-0003](0003-single-public-entry.md)、[infra/docs/azure-infra-guardrails.md](../../infra/docs/azure-infra-guardrails.md)、[App Service の定義](../../infra/workload/modules/app-service.bicep)、[ACR の定義](../../infra/workload/modules/registry.bicep)
 
 ## 背景（なぜ決める必要があるか）
 
@@ -17,8 +17,8 @@ Angular（フロントエンド）と Python（バックエンド）を Azure �
 
 | 案 | 長所 | 短所 |
 | --- | --- | --- |
-| **A. App Service（採用）** | Front Door + Private Link + App Service は定番構成で、**チームに既存の構築実績がある**。フロントとバックを 1 つのアプリにまとめられる（ADR-0003） | 0 台まで縮められず、アクセスが少なくてもプラン代がかかる。TLS・FTP・基本認証などの組み込みポリシーは Deny を選べず監査のみ |
-| B. Container Apps | 使った分だけの課金で、0 台まで縮められる。コンテナで動かせる。外部公開の禁止を Deny で書ける | イメージを置く ACR（閉域なら Premium、月 50 ドル程度）が必要。Front Door から内部モードの環境への Private Link は新しい構成で、実績がない |
+| **A. App Service（採用）** | Front Door + Private Link + App Service は定番構成で、**チームに既存の構築実績がある**。フロントとバックを 1 つのアプリにまとめられる（ADR-0003） | 0 台まで縮められず、アクセスが少なくてもプラン代がかかる。TLS・FTP・基本認証などの組み込みポリシーは Deny を選べず監査のみ（[App Service の組み込みポリシー](https://learn.microsoft.com/en-us/azure/app-service/policy-reference)） |
+| B. Container Apps | 使った分だけの課金で、0 台まで縮められる。コンテナで動かせる。外部公開の禁止を Deny で書ける | イメージを置く ACR（閉域なら Premium、月 50 ドル程度の目安）が必要。Front Door から内部モードの環境への Private Link（[Front Door との統合](https://learn.microsoft.com/en-us/azure/container-apps/how-to-integrate-with-azure-front-door)）は新しい構成で、実績がない |
 | C. Static Web Apps + Functions | フロントの配信が簡単 | 閉域化の選択肢が少なく、Python API の自由度が低い |
 | D. AKS | 何でもできる | 運用負荷が大きく、テンプレートの目的に対して過剰 |
 
@@ -37,22 +37,26 @@ App Service には、ソースコードを組み込みのランタイム（Pytho
 
 | 方法 | 長所 | 短所 |
 | --- | --- | --- |
-| **コンテナ（採用）** | デプロイが「使うイメージの指定」を変える管理 API の操作だけになり、閉域の SCM サイトに届く必要がない。手元・CI・本番で同じイメージが動き、AI の変更を手元で確かめやすい。Angular と Python を 1 つのイメージにまとめられる | ACR Premium（閉域に必要、月 50 ドル程度の目安）が増える。Dockerfile とベースイメージの更新が必要。閉域の ACR への push 経路は別途必要 |
+| **コンテナ（採用）** | デプロイが「使うイメージの指定」を変える管理 API の操作だけになり、閉域の SCM サイトに届く必要がない。手元・CI・本番で同じイメージが動き、AI の変更を手元で確かめやすい。Angular と Python を 1 つのイメージにまとめられる | ACR Premium（閉域に必要。[ACR の Private Link は Premium のみ](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-private-link)。月 50 ドル程度の目安で、[価格表](https://azure.microsoft.com/en-us/pricing/details/container-registry/) で確かめる）が増える。Dockerfile とベースイメージの更新が必要。閉域の ACR への push 経路は別途必要 |
 | コード | ACR が不要で固定費が低い | デプロイ時に閉域の SCM サイトへ届く必要があり、GitHub ホストランナーから送れない。実行環境が手元と一致しにくい |
 
 ACR 分の費用より、デプロイ経路の単純さと再現性を優先した。push 経路の問題は残るが、VNet に入る必要がある場所が ACR 1 か所に集約される。
 
-## 批判的な再検討
+## 結果（この判断で受け入れること）
 
-- **「B より Deny できないポリシーが多く、ガードレールが弱いのでは？」**
-  一部は弱い。TLS・FTP・基本認証・マネージド ID は AuditIfNotExists しか選べないので、
-  IaC 側（`app-service.bicep`）で設定し、Policy は崩れていないかの監査に使う。
-  一方、最も重要な「アプリに直接届かない」（`publicNetworkAccess`）は Deny できるので、G1 の強さは B と変わらない。
-- **「フロントを App Service で動かすのは大げさでは？」**
-  静的ファイルの配信だけなら Storage の静的サイトや Static Web Apps もある。ただし閉域にした Front Door 経由の構成が増えると、
-  ガードレールも 2 系統になる。フロントとバックを 1 つのアプリ・同じポリシーで扱えることを優先した（ADR-0003）。
-- **「デプロイ経路の問題（閉域だと GitHub ホストランナーから届かない）は解けるか？」**
-  半分だけ解ける。コンテナにすれば、App Service への反映は管理 API で済む。ただし閉域の ACR にイメージを push する経路は残る。この経路はこの ADR では決めず、アプリの CD を作るときに決める（[azure-infra-guardrails.md](../../infra/docs/azure-infra-guardrails.md)）。
+- **Deny できないガードレールがある。** TLS・FTP・基本認証・マネージド ID の組み込みポリシーは監査しか選べない。これらは IaC 側で設定し、Policy は崩れていないかの監査に使う。
+  最も重要な「アプリに直接届かない」（パブリックアクセスの無効化）は Deny できるので、G1 の強さは B と変わらない。
+- **フロントの静的ファイルの配信にも App Service を使う。** 静的ファイルだけなら Storage の静的サイトや Static Web Apps もあるが、閉域にした Front Door 経由の構成が増えるとガードレールも 2 系統になる。フロントとバックを 1 つのアプリ・同じポリシーで扱えることを優先した（ADR-0003）。
+- アクセスが少なくても、プランの固定費がかかる。
+
+## この ADR で決めないこと
+
+- **閉域の ACR にイメージを push する経路。** コンテナにしたことで、App Service への反映は管理 API で済むが、ACR への push 経路は残る。アプリの CD を作るときに決める（[azure-infra-guardrails.md](../../infra/docs/azure-infra-guardrails.md)）。
+
+## 確かめ方
+
+- アプリのパブリックアクセスの無効化は、Azure Policy の Deny でデプロイ時に止める。
+- TLS・FTP・基本認証・マネージド ID は、Azure Policy の監査で崩れていないかを見る。
 
 ## 見直しの条件
 
