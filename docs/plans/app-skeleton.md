@@ -3,6 +3,69 @@
 - ストーリー: (Issue なし。プロジェクトのスレッドでの依頼)
 - 関係する機能: `backend/`(雛形)、新規 `frontend/`、`infra/workload/`(`appImage` / `appPort`)、ADR-0002 / ADR-0003
 
+## 全体像
+
+### 出来上がるもの
+
+この計画が終わると、次の状態になる。
+
+- `frontend/`(Angular)と `backend/`(FastAPI)が 1 つのイメージにまとまり、そのイメージを起動すると 8080 番で画面と API の両方に応答する。
+- 画面を開くと、Angular が `/api/health` を呼び、結果(`ok`)を表示する。中身はこれだけで、業務の機能はまだ無い。
+- PR の CI で、バックエンドの統合テスト、フロントエンドの lint とテスト、イメージを起動しての E2E が流れる。
+- 最初の機能を作る人は、`backend/src/app/` に API を、`frontend/src/app/` に画面を足し、テストを書けば同じ CI に乗る。
+
+### リクエストの流れ(本番)
+
+```mermaid
+flowchart LR
+  browser[ブラウザ] -->|HTTPS| fd[Front Door<br/>WAF]
+  fd -->|Private Link<br/>全パス| app
+  subgraph app[App Service: 1 コンテナ・8080 番・root 以外]
+    uv[uvicorn + FastAPI]
+    uv -->|/api/*| api[API のルーター<br/>なければ JSON の 404]
+    uv -->|それ以外| static[Angular のビルド成果物<br/>無いパスは index.html]
+  end
+```
+
+キャッシュのヘッダーもこの FastAPI が付ける(`index.html` は `no-cache`、ハッシュ付きは長期、`/api` は `no-store`)。
+
+### イメージの作り方
+
+```mermaid
+flowchart LR
+  subgraph build[Dockerfile: マルチステージ]
+    node[Node のステージ<br/>ng build] -->|dist/ をコピー| py[Python のステージ<br/>uv で依存を入れる]
+  end
+  py --> image[イメージ 1 つ]
+  image -->|CI| e2e[起動して E2E<br/>HEALTH-2]
+  image -.->|範囲外: #7 の push 経路| acr[ACR → App Service]
+```
+
+### 手元での開発
+
+イメージを作らずに開発できるようにする。`ng serve`(4200 番)が `/api` を uvicorn(8000 番)に中継するので、Angular は本番と同じ相対パスで API を呼べる。
+
+### ディレクトリ構成(この計画の後)
+
+```
+backend/            FastAPI。src/app/main.py がアプリの入口、静的配信は小さなモジュールに分ける
+  tests/            統合テスト(HEALTH-1、ROUTING、CACHING)
+frontend/           Angular 22 の雛形と mise.toml(setup / lint / test / build)
+e2e/                pytest-playwright と mise.toml(HEALTH-2)
+Dockerfile          マルチステージ。root 以外で 8080 を待ち受ける
+infra/workload/     appPort の既定値だけ変える
+docs/adr/           骨格の ADR を 1 つ追加(FastAPI、静的配信、root 以外)
+```
+
+### 範囲
+
+| 含む | 含まない(どこで扱うか) |
+|---|---|
+| 1 コンテナで画面と API が動く、CI で確かめる | Azure へのデプロイ(閉域 ACR への push 経路 #7、実デプロイ #6) |
+| ルーティング、キャッシュのヘッダー、ヘルスチェック | 認証・認可(最初の機能か、別のストーリー) |
+| フロントとバックの雛形と mise のタスク | DB(#9)、設定・シークレットの読み込み(最初に使う機能で) |
+| | App Service のヘルスチェック設定、Front Door のパージ(Issue に起票) |
+
 ## 現在の仕様
 
 ```
