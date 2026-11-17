@@ -2,6 +2,7 @@
 
 python -m aidd_spec render <収集結果.json>... [--format markdown|json]
 python -m aidd_spec verify <計画.md> <収集結果.json>...
+python -m aidd_spec check-ids <収集結果.json>...
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ import json
 import sys
 from pathlib import Path
 
-from aidd_spec import plan, render, spec, verify
+from aidd_spec import ids, plan, render, spec, verify
 
 
 def _render(args: argparse.Namespace) -> int:
@@ -38,6 +39,20 @@ def _verify(args: argparse.Namespace) -> int:
     return 1 if failed else 0
 
 
+def _check_ids(args: argparse.Namespace) -> int:
+    problems = ids.check(spec.load(args.collected))
+    for problem in problems:
+        print(f"✗ {problem.message}")
+    if problems:
+        print(
+            f"\nテスト ID の問題が {len(problems)} 件ある。"
+            "重複は、後からマージする側が計画・テスト・PR 概要の ID を振り直す"
+        )
+        return 1
+    print("テスト ID に重複も書き漏れもない")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="aidd_spec")
     sub = parser.add_subparsers(required=True)
@@ -56,6 +71,10 @@ def main(argv: list[str] | None = None) -> int:
     p_verify.add_argument("plan", type=Path)
     p_verify.add_argument("collected", nargs="+", type=Path)
     p_verify.set_defaults(func=_verify)
+
+    p_ids = sub.add_parser("check-ids", help="テスト ID の重複と書き漏れを検出する")
+    p_ids.add_argument("collected", nargs="+", type=Path)
+    p_ids.set_defaults(func=_check_ids)
 
     args = parser.parse_args(argv)
     code: int = args.func(args)
