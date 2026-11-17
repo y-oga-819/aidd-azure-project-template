@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+#MISE description="テスト ID の次の番号を出す。まだマージされていない他のブランチ(計画のドラフト PR など)が使っている番号も避ける"
+#MISE dir="{{config_root}}"
+#USAGE arg "<prefix>" help="機能の正式名の接頭辞(例: ORDER、GIFT-CARD)"
+# 連番は並行するブランチで取り合うことがある。手元の検査も CI も、まだマージされていない他人のブランチは見えないので、
+# 採番の時点でリモートの全ブランチを見て避ける。すり抜けた重複は test:ids(check)が止める。
+set -euo pipefail
+
+prefix="${usage_prefix}"
+if [[ ! "$prefix" =~ ^[A-Z][A-Z0-9]*(-[A-Z][A-Z0-9]*)*$ ]]; then
+  echo "接頭辞は大文字の機能名で書いてください(例: ORDER、GIFT-CARD): $prefix" >&2
+  exit 1
+fi
+
+if ! git fetch --quiet --prune origin; then
+  echo "警告: origin から取得できませんでした。手元にある情報だけで番号を出します" >&2
+fi
+
+mapfile -t refs < <(git for-each-ref --format='%(refname)' refs/remotes/origin | grep -v '/HEAD$' || true)
+
+# GIFT-CARD-3 を CARD-3 と取り違えないよう、接頭辞の直前が ID の文字でないものだけを数える
+pattern="(^|[^A-Z0-9-])${prefix}-[0-9]+"
+# 書き方の例(skill、テンプレート、docs 直下の文書、ツールのコメント)に出てくる ID は数えない。
+# 例が混ざっても番号が飛ぶだけで害はない(重複より飛びの方が安全)
+paths=(. ':(exclude).claude' ':(exclude)docs/examples' ':(exclude)docs/templates' ':(exclude,glob)docs/*.md' ':(exclude)README.md' ':(exclude)tools/src')
+max="$(
+  {
+    git grep -h -I -oE "$pattern" -- "${paths[@]}" || true
+    ((${#refs[@]})) && { git grep -h -I -oE "$pattern" "${refs[@]}" -- "${paths[@]}" || true; }
+  } | { grep -oE '[0-9]+$' || true; } | sort -n | tail -1
+)"
+
+if [[ -z "$max" ]]; then
+  echo "${prefix}-1"
+  echo "(${prefix} の ID はまだどこにもありません)" >&2
+else
+  echo "${prefix}-$((max + 1))"
+  echo "(手元と origin の全ブランチで使われている最大は ${prefix}-${max})" >&2
+fi
