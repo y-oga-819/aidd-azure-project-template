@@ -50,3 +50,4 @@ keep docs/adr/0007-plan-location.md
 keep docs/adr/0008-adr-content-scope.md
 keep docs/adr/0009-gate1-draft-pr.md
 keep docs/adr/0010-test-id-numbering.md
+keep docs/adr/0011-harness-boundary.md
