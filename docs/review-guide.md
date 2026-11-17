@@ -43,9 +43,11 @@ PR の正しさを判断する中心。ここに最も時間を使う。
 **チェックが付いていなくても、diff の場所で疑う。** AI が「該当なし」を誤って書くことがある。
 例えば、次のファイルが変わっていれば該当する可能性が高い。
 
-- `infra/`、`*.bicep`、`.github/workflows/`、`azure-pipelines.yml` → セキュリティ境界
+- インフラのコード、`.github/workflows/`、`azure-pipelines.yml` → セキュリティ境界
 - API のルーティング、スキーマ、`mise.toml` のタスク名 → 公開インターフェース
 - `pyproject.toml`、`package.json`、ロックファイル → 依存
+
+このプロジェクトでの具体的な場所(インフラのコードがどこにあるか、など)は、[プロジェクトの前提](project-context.md) の「レビューで疑う場所」にある。
 
 ### 4. 判断と捨てた案
 
