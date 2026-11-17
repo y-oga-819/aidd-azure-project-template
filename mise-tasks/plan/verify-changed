@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+#MISE description="この作業ブランチで追加・変更した計画(docs/plans/)を、テストと照合する(テストは実行しない)"
+#MISE dir="{{config_root}}"
+# 照合の中身は plan:verify と同じ。違いは、照合する計画をベースブランチとの差分から選ぶこと。
+# CI では、レビューに出した(ドラフトでない)PR で流す。計画だけを出すドラフトの PR(ゲート 1)では、
+# テストがまだ無いので「テストがない」と出るのが正しく、check には含めない。
+set -euo pipefail
+source scripts/lib/vcs.sh
+source scripts/lib/spec.sh
+
+base="$(vcs_base_branch)"
+# CI でも手元でも、リモートのベースブランチがあればそれと比べる(手元の main が古くても誤らないように)
+base_ref="origin/$base"
+git rev-parse --verify --quiet "$base_ref" >/dev/null || base_ref="$base"
+merge_base="$(git merge-base "$base_ref" HEAD)"
+
+# 削除した計画は照合しない。README は計画ではない
+mapfile -t plans < <(git diff --name-only --diff-filter=AMR "$merge_base" HEAD -- 'docs/plans/*.md' ':!docs/plans/README.md')
+if ((${#plans[@]} == 0)); then
+  echo "$base_ref から追加・変更した計画はありません。照合を飛ばします"
+  exit 0
+fi
+
+collected="$(spec_collect_all)"
+trap 'rm -rf "$collected"' EXIT
+
+status=0
+for plan in "${plans[@]}"; do
+  echo "== $plan"
+  mise run --quiet //tools:cli -- verify "$(realpath "$plan")" "$collected"/*.json || status=1
+  echo
+done
+exit "$status"
