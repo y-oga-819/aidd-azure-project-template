@@ -7,12 +7,17 @@
 
 set -euo pipefail
 
+# spec-collect タスクの名前を 1 行に 1 つ返す(無ければ何も返さない)
+spec_collect_tasks() {
+  mise tasks ls --all --json | python3 -c 'import json,sys; print("\n".join(t["name"] for t in json.load(sys.stdin) if t["name"].endswith(":spec-collect")))'
+}
+
 # 収集結果を書き出すディレクトリを作り、そのパスを返す
 spec_collect_all() {
   local out_dir
   out_dir="$(mktemp -d)"
   local tasks
-  tasks="$(mise tasks ls --all --json | python3 -c 'import json,sys; print("\n".join(t["name"] for t in json.load(sys.stdin) if t["name"].endswith(":spec-collect")))')"
+  tasks="$(spec_collect_tasks)"
   if [[ -z "$tasks" ]]; then
     echo "spec-collect タスクを持つコンポーネントがありません" >&2
     return 1
