@@ -4,6 +4,8 @@ name: ci
 
 on:
   pull_request:
+    # ready_for_review: ドラフトをレビューに出したときに、計画の照合を流し直すため
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
 
@@ -32,3 +34,8 @@ jobs:
         with:
           version: 2026.11.7
       - run: mise run ci
+      # 計画とテストの照合。計画だけを出すドラフトの PR(ゲート 1)ではテストがまだ無いので流さない
+      - if: github.event_name == 'pull_request' && !github.event.pull_request.draft
+        run: mise run plan:verify-changed
+        env:
+          AIDD_BASE_BRANCH: ${{ github.base_ref }}
