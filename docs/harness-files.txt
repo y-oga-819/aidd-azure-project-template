@@ -1,14 +1,18 @@
 # ハーネスとして配るファイルの一覧(説明は docs/harness.md)。
-# 別のリポジトリへ持ち出すとき(copier のテンプレート、zip など)は、この一覧を配る範囲にする。
-# 1 行に 1 つ、「<種類> <パス>」。ディレクトリは / で終える。# から後はコメント。
-#   keep    = そのまま配る。プロジェクト固有の前提を書かない
-#   rewrite = 雛形として配り、利用先で書き直す
+# 別のリポジトリへ持ち出すとき(mise run harness:pack の zip など)は、この一覧を配る範囲にする。
+# 1 行に 1 つ。ディレクトリは / で終える。# から後はコメント。
+#   keep <パス>                 = そのまま配る。プロジェクト固有の前提を書かない
+#   init <置き場所> [<元のファイル>] = 利用先で用意するファイル。zip では .harness-init/ の下に入り、
+#                                 scripts/harness-init.sh が、置き場所に無いときだけ置く(あれば上書きしない)
 # 一覧のパスが実在するかは mise run harness:files(check に含む)で確かめる。
 
-# プロジェクトの前提(ハーネスが見出しの名前で指す)
-rewrite docs/project-context.md
-# 共通ツールと集約タスク。利用先に mise.toml があれば手でまとめる
-rewrite mise.toml
+# プロジェクトの前提(ハーネスが見出しの名前で指す)。中身はプロジェクトごとなので、空の雛形を置く
+init docs/project-context.md docs/templates/project-context.md
+# 共通ツールと集約タスク。利用先に mise.toml があれば、harness-init.sh の案内に従って手でまとめる
+init mise.toml
+
+# 取り込んだ後に 1 回流すセットアップ
+keep scripts/harness-init.sh
 
 # skill
 keep .claude/skills/planning/
@@ -23,6 +27,7 @@ keep mise-tasks/test/
 keep mise-tasks/push
 keep mise-tasks/pr
 keep mise-tasks/pr-view
+keep mise-tasks/harness/
 
 # CI(mise run ci を呼ぶだけ)
 keep .github/workflows/ci.yml
