@@ -48,6 +48,9 @@ keep docs/plans/README.md
 keep docs/adr/README.md
 
 # ハーネスの判断(ADR)
+keep docs/adr/0001-iac-tool.md
+keep docs/adr/0002-hosting-app-service.md
+keep docs/adr/0003-single-public-entry.md
 keep docs/adr/0004-task-runner-mise.md
 keep docs/adr/0005-tests-as-specification.md
 keep docs/adr/0006-adr-operation.md
