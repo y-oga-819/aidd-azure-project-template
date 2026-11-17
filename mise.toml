@@ -37,6 +37,9 @@ gh = "2.104.0"
 AIDD_VCS_PROVIDER = "{{ get_env(name='AIDD_VCS_PROVIDER', default='github') }}"
 # PR のマージ先ブランチ
 AIDD_BASE_BRANCH = "{{ get_env(name='AIDD_BASE_BRANCH', default='main') }}"
+# ハーネスの補助ツール(aidd_spec)のソースの場所。各コンポーネントの spec-collect がこれを PYTHONPATH に足す。
+# コンポーネントがハーネスの置き場所を相対パスで知らずに済むよう、ここ 1 か所で決める(docs/harness.md)。
+AIDD_TOOLS_SRC = "{{config_root}}/tools/src"
 
 # ------------------------------------------------------------
 # 集約タスク(各コンポーネントの同名タスクをまとめて実行する)
