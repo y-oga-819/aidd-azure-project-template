@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+#MISE description="ハーネスとして配るファイルの一覧(docs/harness-files.txt)が実在するかを確かめる。--list で配るファイルを全部出す"
+#MISE dir="{{config_root}}"
+#USAGE flag "--list" help="確かめた後、一覧に含まれる git 管理下のファイルを 1 行に 1 つ出す"
+set -euo pipefail
+
+manifest="docs/harness-files.txt"
+errors=0
+paths=()
+lineno=0
+while IFS= read -r line || [[ -n "$line" ]]; do
+  lineno=$((lineno + 1))
+  line="${line%%#*}"
+  read -r kind path rest <<<"$line" || true
+  [[ -z "${kind:-}" ]] && continue
+  if [[ "$kind" != "keep" && "$kind" != "rewrite" ]] || [[ -z "${path:-}" || -n "${rest:-}" ]]; then
+    echo "$manifest:$lineno: 「keep <パス>」か「rewrite <パス>」の形にする: $line" >&2
+    errors=1
+    continue
+  fi
+  if [[ ! -e "$path" ]]; then
+    echo "$manifest:$lineno: 無い: $path(改名・削除したら一覧も直す)" >&2
+    errors=1
+    continue
+  fi
+  if [[ "$path" != */ && -d "$path" ]]; then
+    echo "$manifest:$lineno: ディレクトリは / で終える: $path" >&2
+    errors=1
+    continue
+  fi
+  paths+=("$path")
+done <"$manifest"
+
+if [[ $errors -ne 0 ]]; then
+  exit 1
+fi
+
+if [[ "${usage_list:-false}" == "true" ]]; then
+  git ls-files -- "${paths[@]}"
+else
+  echo "ハーネスの一覧にある ${#paths[@]} 個のパスは、すべてある"
+fi

@@ -1,0 +1,51 @@
+# ハーネスとして配るファイルの一覧(説明は docs/harness.md)。
+# 別のリポジトリへ持ち出すとき(copier のテンプレート、zip など)は、この一覧を配る範囲にする。
+# 1 行に 1 つ、「<種類> <パス>」。ディレクトリは / で終える。# から後はコメント。
+#   keep    = そのまま配る。プロジェクト固有の前提を書かない
+#   rewrite = 雛形として配り、利用先で書き直す
+# 一覧のパスが実在するかは mise run harness:files(check に含む)で確かめる。
+
+# プロジェクトの前提(ハーネスが見出しの名前で指す)
+rewrite docs/project-context.md
+# 共通ツールと集約タスク。利用先に mise.toml があれば手でまとめる
+rewrite mise.toml
+
+# skill
+keep .claude/skills/planning/
+keep .claude/skills/pr-quiz/
+
+# 補助ツールと mise タスク
+keep tools/
+keep scripts/lib/
+keep mise-tasks/docs/spec
+keep mise-tasks/plan/
+keep mise-tasks/test/
+keep mise-tasks/push
+keep mise-tasks/pr
+keep mise-tasks/pr-view
+
+# CI(mise run ci を呼ぶだけ)
+keep .github/workflows/ci.yml
+keep .github/workflows/mutation.yml
+keep azure-pipelines.yml
+
+# 進め方の文書とテンプレート
+keep docs/harness-files.txt
+keep docs/development-flow.md
+keep docs/testing-strategy.md
+keep docs/review-guide.md
+keep docs/pull_request_template.md
+keep docs/vcs-provider.md
+keep docs/templates/
+keep docs/examples/
+keep docs/plans/README.md
+keep docs/adr/README.md
+
+# ハーネスの判断(ADR)
+keep docs/adr/0004-task-runner-mise.md
+keep docs/adr/0005-tests-as-specification.md
+keep docs/adr/0006-adr-operation.md
+keep docs/adr/0007-plan-location.md
+keep docs/adr/0008-adr-content-scope.md
+keep docs/adr/0009-gate1-draft-pr.md
+keep docs/adr/0010-test-id-numbering.md

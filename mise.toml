@@ -80,7 +80,8 @@ depends = ["secrets", "//...:security"]
 [tasks.check]
 description = "CI と同じ検査一式。PR を出す前に手元で流す"
 # test:ids はテスト ID の重複と書き漏れ(mise-tasks/test/ids)
-depends = ["format-check", "lint", "typecheck", "test", "test:ids", "security"]
+# harness:files はハーネスとして配るファイルの一覧が実在するか(mise-tasks/harness/files)
+depends = ["format-check", "lint", "typecheck", "test", "test:ids", "harness:files", "security"]
 
 [tasks.ci]
 description = "CI の入口。依存を入れてから check を流す"
