@@ -40,7 +40,7 @@ PR 操作の GitHub / Azure DevOps 切り替えは [docs/vcs-provider.md](docs/v
 
 ## ハーネスとプロジェクトの境界
 
-進め方・skill・検査・タスクの一式(ハーネス)は、他のリポジトリへ持ち出せるように育てている。範囲と立場は [docs/harness.md](docs/harness.md)、このプロジェクトに固有の前提は [docs/project-context.md](docs/project-context.md) にある。ハーネスの文書や skill に固有の前提を書かず、プロジェクトの前提を指す。
+進め方・skill・検査・タスクの一式(ハーネス)は、他のリポジトリへ持ち出せるように育てている。ハーネスは Angular / Python / Azure の構成を前提にし、skill や文書は具体名で書く。範囲と立場は [docs/harness.md](docs/harness.md)、このリポジトリに固有のこと(何を作るか、想定する構成と違う点)は [docs/project-context.md](docs/project-context.md) にある。
 
 ## 開発の進め方とテスト
 
