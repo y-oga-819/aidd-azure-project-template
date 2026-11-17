@@ -34,3 +34,16 @@ steps:
 
   - bash: mise run ci
     displayName: mise run ci
+
+  # 計画とテストの照合。計画だけを出すドラフトの PR(ゲート 1)ではテストがまだ無いので流さない。
+  # 未検証: ドラフトの判定に System.PullRequest.IsDraft を使う。ドラフトを公開したときに
+  # Build validation が流れ直すかは、ブランチポリシーの設定と合わせて移行時に確かめる。
+  - bash: |
+      set -euo pipefail
+      if [[ "${SYSTEM_PULLREQUEST_ISDRAFT:-false}" == "True" || "${SYSTEM_PULLREQUEST_ISDRAFT:-false}" == "true" ]]; then
+        echo "ドラフトの PR なので、計画の照合を飛ばします"
+        exit 0
+      fi
+      AIDD_BASE_BRANCH="${SYSTEM_PULLREQUEST_TARGETBRANCH#refs/heads/}" mise run plan:verify-changed
+    displayName: mise run plan:verify-changed
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))

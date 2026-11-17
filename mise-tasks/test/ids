@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#MISE description="テスト ID の重複と書き漏れを検出する(テストは実行しない。check に含む)"
+#MISE dir="{{config_root}}"
+set -euo pipefail
+source scripts/lib/spec.sh
+
+collected="$(spec_collect_all)"
+trap 'rm -rf "$collected"' EXIT
+
+mise run --quiet //tools:cli -- check-ids "$collected"/*.json

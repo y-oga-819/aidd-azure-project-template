@@ -9,12 +9,14 @@
 mise trust          # 初回のみ。リポジトリの mise.toml を信頼する
 mise install        # ツールを揃える
 mise run setup      # 依存関係を入れる
-mise run check      # CI と同じ検査一式(format-check / lint / typecheck / test / security)
+mise run check      # CI と同じ検査一式(format-check / lint / typecheck / test / test:ids / security)
 mise run format     # 整形
 mise run pr -b <本文>  # check → push → PR 作成(本文は docs/pull_request_template.md の形)
 mise run pr-view    # 現在のブランチの PR と CI の状況
 mise run docs:spec  # テストから仕様一覧を出す(テストが仕様の正本)
 mise run plan:verify <計画>  # 計画のテストケース一覧とテストを照合する
+mise run plan:verify-changed # この作業ブランチで変えた計画を全部照合する(CI はレビューに出した PR で流す)
+mise run test:ids   # テスト ID の重複と書き漏れを検出する(check に含む)
 mise run test:mutation      # ミューテーションテスト(任意。変更したファイルだけ)
 mise tasks --all    # タスク一覧
 ```
