@@ -76,7 +76,8 @@ depends = ["secrets", "//...:security"]
 
 [tasks.check]
 description = "CI と同じ検査一式。PR を出す前に手元で流す"
-depends = ["format-check", "lint", "typecheck", "test", "security"]
+# test:ids はテスト ID の重複と書き漏れ(mise-tasks/test/ids)
+depends = ["format-check", "lint", "typecheck", "test", "test:ids", "security"]
 
 [tasks.ci]
 description = "CI の入口。依存を入れてから check を流す"
