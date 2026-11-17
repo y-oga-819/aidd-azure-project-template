@@ -34,6 +34,10 @@ fi
 
 if [[ "${usage_skip_check:-false}" != "true" ]]; then
   mise run check
+  # レビューに出すなら、変えた計画とテストが揃っているはず。計画だけのドラフト(ゲート 1)では流さない
+  if [[ "$draft" != "true" ]]; then
+    mise run plan:verify-changed
+  fi
 fi
 
 mise run push
