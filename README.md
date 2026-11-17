@@ -19,6 +19,7 @@ mise run plan:verify-changed # この作業ブランチで変えた計画を全�
 mise run test:ids   # テスト ID の重複と書き漏れを検出する(check に含む)
 mise run test:mutation      # ミューテーションテスト(任意。変更したファイルだけ)
 mise run harness:files      # ハーネスとして配るファイルの一覧が実在するか(check に含む)
+mise run harness:pack       # ハーネスを zip にまとめる(他のリポジトリの最初のコミットで取り込む)
 mise tasks --all    # タスク一覧
 ```
 
