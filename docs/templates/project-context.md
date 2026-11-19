@@ -16,7 +16,7 @@
 
 ## 想定する構成と違う点
 
-<!-- ADR-0001〜0003(Bicep、App Service のコンテナ、入口は Front Door だけで 1 コンテナ)と違う点。
+<!-- ハーネスの「想定する構成」(docs/harness/README.md。Bicep、App Service のコンテナ、入口は Front Door だけで 1 コンテナ)と違う点。
      例: 「入口は共通基盤の Front Door で、キャッシュは最初から有効」「バックエンドだけで画面は無い」。無ければ「なし」 -->
 
 ## インフラが守っていること
