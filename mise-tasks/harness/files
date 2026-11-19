@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-#MISE description="ハーネスとして配るファイルの一覧(docs/harness-files.txt)が実在するかを確かめる。--list でそのまま配るファイルを、--init で利用先に置くファイルを出す"
+#MISE description="ハーネスとして配るファイルの一覧(docs/harness/files.txt)が実在するかを確かめる。--list でそのまま配るファイルを、--init で利用先に置くファイルを出す"
 #MISE dir="{{config_root}}"
 #USAGE flag "--list" help="確かめた後、keep に含まれる git 管理下のファイルを 1 行に 1 つ出す"
 #USAGE flag "--init" help="確かめた後、init の「置き場所<TAB>元のファイル」を 1 行に 1 つ出す"
 set -euo pipefail
 
-manifest="docs/harness-files.txt"
+manifest="docs/harness/files.txt"
 errors=0
 keeps=()
 inits=()

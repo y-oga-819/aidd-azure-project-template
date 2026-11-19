@@ -1,7 +1,7 @@
 # 開発の進め方
 
 チームで並行して開発しても、速く、コンフリクトしにくく進めるための約束。
-前提となる判断は [ADR-0005](adr/0005-tests-as-specification.md)(仕様の正本はテスト、計画は使い捨て)にある。
+前提となる判断は [HADR-0002](harness/adr/0002-tests-as-specification.md)(仕様の正本はテスト、計画は使い捨て)にある。
 
 ## 1. 何を書き、何を残すか
 
@@ -28,7 +28,7 @@ flowchart TB
 
 ### 1. 計画
 
-- Claude Code のプランニング skill(`/planning`。[.claude/skills/planning/](../.claude/skills/planning/SKILL.md))で進める。計画は `docs/plans/` に書き出す([ADR-0007](adr/0007-plan-location.md))。
+- Claude Code のプランニング skill(`/planning`。[.claude/skills/planning/](../.claude/skills/planning/SKILL.md))で進める。計画は `docs/plans/` に書き出す([HADR-0004](harness/adr/0004-plan-location.md))。
 - AI がストーリーと既存のテストを読み、[計画テンプレート](templates/plan.md)を下書きする。
 - 複雑さの種類(条件の組み合わせ、状態、順序のある計算、外部依存、時間)を見分け、種類ごとに考えるべき組み合わせを表にして並べる。表にすると、考え忘れたマスが空欄として見える。
 - 埋められないマスは、AI が人間に質問する。質問に答えることで、悪手に気づき、学ぶ場にもする。質問には「なぜ聞くか」(見落とすと何が起きるか)を添える。観点は [悪手の観点](../.claude/skills/planning/checklist.md) にある。
@@ -39,7 +39,7 @@ flowchart TB
 
 コードを書く前が、誤りを直すのに一番安い。
 
-- 場所: 計画だけをコミットして、ドラフトの PR を開く(`mise run pr --draft`)。レビュアーは行コメントで指摘する([ADR-0009](adr/0009-gate1-draft-pr.md))。
+- 場所: 計画だけをコミットして、ドラフトの PR を開く(`mise run pr --draft`)。レビュアーは行コメントで指摘する([HADR-0006](harness/adr/0006-gate1-draft-pr.md))。
 - 通過の記録: レビュアーが「ゲート 1 OK」などとコメントする。PR の承認(Approve)は使わない。承認は後から積むテストと実装にも残って見え、コードを読まずに承認したのと区別できなくなるため。
 - その後のテストと実装は、同じ PR に積む。
 
@@ -85,7 +85,7 @@ mise run docs:spec [絞り込み]          # テストから仕様一覧を出�
 - **共有される部分を先に小さく確定させてマージする。** 状態の追加、DB スキーマ、API 契約など、複数の作業が依存するものは、最初の PR にして先にマージする。その後で並行して進める。計画の「PR の分割」に書く。
 - **ブランチは短命にする。** 1 日以内のマージを基本にする。
 - **仕様の正本がテストなので、ルールの追加はたいてい別のテスト関数になる。** 同じ表(README)を全員が編集する形を避けている。
-- **テスト ID の番号は `mise run test:next-id <接頭辞>` で出す。** 他のブランチ(計画のドラフト PR を含む)が使っている番号も避ける。すり抜けた重複は `mise run check` と CI が止め、後からマージする側が振り直す([ADR-0010](adr/0010-test-id-numbering.md))。
+- **テスト ID の番号は `mise run test:next-id <接頭辞>` で出す。** 他のブランチ(計画のドラフト PR を含む)が使っている番号も避ける。すり抜けた重複は `mise run check` と CI が止め、後からマージする側が振り直す([HADR-0007](harness/adr/0007-test-id-numbering.md))。
 
 ## 4. コンフリクトが起きたときの解消
 

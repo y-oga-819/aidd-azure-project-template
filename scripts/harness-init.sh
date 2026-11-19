@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ハーネスを取り込んだリポジトリで、最初に 1 回流すセットアップ(docs/harness.md の「持ち出すとき」)。
+# ハーネスを取り込んだリポジトリで、最初に 1 回流すセットアップ(docs/harness/README.md の「持ち出すとき」)。
 #
 # mise run harness:pack で作った zip は、利用先にもともとあるファイル(mise.toml など)を上書きしないよう、
 # 利用先で用意するファイルを .harness-init/ の下に入れてある。このスクリプトはそれを置き場所へ移す。
@@ -47,7 +47,7 @@ cat <<'E'
 次にやること:
   1. docs/project-context.md の各見出しを、このプロジェクトに合わせて書く(skill が質問の仮の答えをここから作る)
   2. mise trust && mise install && mise run setup
-  3. テストを持つコンポーネント(backend/ など)の mise.toml に spec-collect タスクを足す(docs/harness.md の「ハーネスとプロジェクトの接点」)
+  3. テストを持つコンポーネント(backend/ など)の mise.toml に spec-collect タスクを足す(docs/harness/README.md の「ハーネスとプロジェクトの接点」)
   4. mise run check が通ったら、HARNESS_VERSION と一緒にコミットする
 E
 if ((${#kept[@]})); then

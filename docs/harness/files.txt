@@ -1,4 +1,4 @@
-# ハーネスとして配るファイルの一覧(説明は docs/harness.md)。
+# ハーネスとして配るファイルの一覧(説明は docs/harness/README.md)。
 # 別のリポジトリへ持ち出すとき(mise run harness:pack の zip など)は、この一覧を配る範囲にする。
 # 1 行に 1 つ。ディレクトリは / で終える。# から後はコメント。
 #   keep <パス>                 = そのまま配る。プロジェクト固有の前提を書かない
@@ -35,8 +35,8 @@ keep .github/workflows/mutation.yml
 keep azure-pipelines.yml
 
 # 進め方の文書とテンプレート
-keep docs/harness.md
-keep docs/harness-files.txt
+keep docs/harness/README.md
+keep docs/harness/files.txt
 keep docs/development-flow.md
 keep docs/testing-strategy.md
 keep docs/review-guide.md
@@ -48,14 +48,12 @@ keep docs/plans/README.md
 keep docs/adr/README.md
 
 # ハーネスの判断(ADR)
-keep docs/adr/0001-iac-tool.md
-keep docs/adr/0002-hosting-app-service.md
-keep docs/adr/0003-single-public-entry.md
-keep docs/adr/0004-task-runner-mise.md
-keep docs/adr/0005-tests-as-specification.md
-keep docs/adr/0006-adr-operation.md
-keep docs/adr/0007-plan-location.md
-keep docs/adr/0008-adr-content-scope.md
-keep docs/adr/0009-gate1-draft-pr.md
-keep docs/adr/0010-test-id-numbering.md
-keep docs/adr/0011-harness-boundary.md
+keep docs/harness/adr/README.md
+keep docs/harness/adr/0001-task-runner-mise.md
+keep docs/harness/adr/0002-tests-as-specification.md
+keep docs/harness/adr/0003-adr-operation.md
+keep docs/harness/adr/0004-plan-location.md
+keep docs/harness/adr/0005-adr-content-scope.md
+keep docs/harness/adr/0006-gate1-draft-pr.md
+keep docs/harness/adr/0007-test-id-numbering.md
+keep docs/harness/adr/0008-harness-boundary.md

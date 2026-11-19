@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="ハーネスとして配るファイル(docs/harness-files.txt)を zip にまとめる。使う側のリポジトリの最初のコミットで取り込む"
+#MISE description="ハーネスとして配るファイル(docs/harness/files.txt)を zip にまとめる。使う側のリポジトリの最初のコミットで取り込む"
 #MISE dir="{{config_root}}"
 #USAGE flag "-o --output <file>" help="出力先。省略時は aidd-harness-<コミット>.zip"
 # 中身は HEAD のコミットから取る(作業ツリーの未コミットの変更は入れない)。
@@ -8,8 +8,8 @@
 # 元にした版を HARNESS_VERSION に書いておき、取り込んだ後でも元のリポジトリとの差分を見比べられるようにする。
 set -euo pipefail
 
-if [[ -n "$(git status --porcelain -- docs/harness-files.txt)" ]]; then
-  echo "docs/harness-files.txt に未コミットの変更があります。コミットしてから流してください" >&2
+if [[ -n "$(git status --porcelain -- docs/harness/files.txt)" ]]; then
+  echo "docs/harness/files.txt に未コミットの変更があります。コミットしてから流してください" >&2
   exit 1
 fi
 mise run --quiet harness:files >/dev/null
