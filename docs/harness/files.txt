@@ -47,13 +47,3 @@ keep docs/examples/
 keep docs/plans/README.md
 keep docs/adr/README.md
 
-# ハーネスの判断(ADR)
-keep docs/harness/adr/README.md
-keep docs/harness/adr/0001-task-runner-mise.md
-keep docs/harness/adr/0002-tests-as-specification.md
-keep docs/harness/adr/0003-adr-operation.md
-keep docs/harness/adr/0004-plan-location.md
-keep docs/harness/adr/0005-adr-content-scope.md
-keep docs/harness/adr/0006-gate1-draft-pr.md
-keep docs/harness/adr/0007-test-id-numbering.md
-keep docs/harness/adr/0008-harness-boundary.md
