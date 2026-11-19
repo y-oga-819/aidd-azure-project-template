@@ -1,7 +1,7 @@
-# HADR-0001: タスクランナーと CI の入口に mise を採用する
+# ADR-0004: タスクランナーと CI の入口に mise を採用する
 
 - 状態: 採用（2026-11-14）
-- 関連: [ルートの mise.toml](../../../mise.toml)、[vcs-provider.md](../../vcs-provider.md)、[PR 操作の切り替え](../../../scripts/lib/vcs.sh)
+- 関連: [ルートの mise.toml](../../mise.toml)、[vcs-provider.md](../vcs-provider.md)、[PR 操作の切り替え](../../scripts/lib/vcs.sh)
 
 ## 背景（なぜ決める必要があるか）
 
@@ -41,7 +41,7 @@
 
 ## この ADR で決めないこと
 
-- **Azure DevOps 側での動作。** `az repos` と Azure Pipelines の定義は、移るときに確かめる。確かめる項目は [vcs-provider.md](../../vcs-provider.md) に置く。
+- **Azure DevOps 側での動作。** `az repos` と Azure Pipelines の定義は、移るときに確かめる。確かめる項目は [vcs-provider.md](../vcs-provider.md) に置く。
 
 ## 確かめ方
 
