@@ -4,6 +4,12 @@
 set -euo pipefail
 source scripts/lib/spec.sh
 
+# ハーネスを取り込んだ直後など、テストを持つコンポーネントがまだ無いときは、検査するものが無いので通す
+if [[ -z "$(spec_collect_tasks)" ]]; then
+  echo "spec-collect タスクを持つコンポーネントが無いので、テスト ID の検査を飛ばす"
+  exit 0
+fi
+
 collected="$(spec_collect_all)"
 trap 'rm -rf "$collected"' EXIT
 

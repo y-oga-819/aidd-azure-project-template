@@ -38,7 +38,7 @@ run = "uv export --quiet --locked --no-dev --no-emit-project --no-hashes --forma
 
 [tasks.spec-collect]
 description = "テストを収集し、仕様一覧の元データを AIDD_SPEC_OUT に書き出す(テストは実行しない。docs:spec / plan:verify から呼ばれる)"
-env = { PYTHONPATH = "{{config_root}}/../tools/src", AIDD_SPEC_COMPONENT = "backend" }
+env = { PYTHONPATH = "{{env.AIDD_TOOLS_SRC}}", AIDD_SPEC_COMPONENT = "backend" }
 run = "uv run --locked pytest --collect-only -q -p aidd_spec.pytest_plugin"
 
 [tasks.test-mutation]

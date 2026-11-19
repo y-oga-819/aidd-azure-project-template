@@ -37,6 +37,9 @@ gh = "2.104.0"
 AIDD_VCS_PROVIDER = "{{ get_env(name='AIDD_VCS_PROVIDER', default='github') }}"
 # PR のマージ先ブランチ
 AIDD_BASE_BRANCH = "{{ get_env(name='AIDD_BASE_BRANCH', default='main') }}"
+# ハーネスの補助ツール(aidd_spec)のソースの場所。各コンポーネントの spec-collect がこれを PYTHONPATH に足す。
+# コンポーネントがハーネスの置き場所を相対パスで知らずに済むよう、ここ 1 か所で決める(docs/harness/README.md)。
+AIDD_TOOLS_SRC = "{{config_root}}/tools/src"
 
 # ------------------------------------------------------------
 # 集約タスク(各コンポーネントの同名タスクをまとめて実行する)
@@ -77,7 +80,8 @@ depends = ["secrets", "//...:security"]
 [tasks.check]
 description = "CI と同じ検査一式。PR を出す前に手元で流す"
 # test:ids はテスト ID の重複と書き漏れ(mise-tasks/test/ids)
-depends = ["format-check", "lint", "typecheck", "test", "test:ids", "security"]
+# harness:files はハーネスとして配るファイルの一覧が実在するか(mise-tasks/harness/files)
+depends = ["format-check", "lint", "typecheck", "test", "test:ids", "harness:files", "security"]
 
 [tasks.ci]
 description = "CI の入口。依存を入れてから check を流す"

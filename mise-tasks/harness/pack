@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+#MISE description="ハーネスとして配るファイル(docs/harness/files.txt)を zip にまとめる。使う側のリポジトリの最初のコミットで取り込む"
+#MISE dir="{{config_root}}"
+#USAGE flag "-o --output <file>" help="出力先。省略時は aidd-harness-<コミット>.zip"
+# 中身は HEAD のコミットから取る(作業ツリーの未コミットの変更は入れない)。
+# keep のファイルはそのままの場所に、init のファイルは .harness-init/<置き場所> に入れる。
+# 利用先で展開したときに、もともとある mise.toml などを上書きしないため。置き場所へ移すのは scripts/harness-init.sh。
+# 元にした版を HARNESS_VERSION に書いておき、取り込んだ後でも元のリポジトリとの差分を見比べられるようにする。
+set -euo pipefail
+
+if [[ -n "$(git status --porcelain -- docs/harness/files.txt)" ]]; then
+  echo "docs/harness/files.txt に未コミットの変更があります。コミットしてから流してください" >&2
+  exit 1
+fi
+mise run --quiet harness:files >/dev/null
+
+commit="$(git rev-parse HEAD)"
+short="$(git rev-parse --short HEAD)"
+output="$(realpath -m "${usage_output:-aidd-harness-${short}.zip}")"
+
+mapfile -t files < <(git ls-tree -r --name-only HEAD -- $(mise run --quiet harness:files --list | sort -u))
+mapfile -t inits < <(mise run --quiet harness:files --init)
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+
+# init のファイルを HEAD から取り出し、置き場所ごとに --prefix を付けて足す
+# (git archive の --add-file は、その前に指定した --prefix の下に basename で入る)
+add_args=()
+for entry in "${inits[@]}"; do
+  dest="${entry%%$'\t'*}"
+  src="${entry#*$'\t'}"
+  mkdir -p "$work/init/$dest"
+  git show "HEAD:$src" >"$work/init/$dest/$(basename "$dest")"
+  dir="$(dirname "$dest")"
+  [[ "$dir" == "." ]] && dir="" || dir="$dir/"
+  add_args+=("--prefix=.harness-init/$dir" "--add-file=$work/init/$dest/$(basename "$dest")")
+done
+
+{
+  echo "repository: $(git remote get-url origin 2>/dev/null || echo unknown)"
+  echo "commit: $commit"
+  echo "date: $(git show -s --format=%cI HEAD)"
+  echo "init:"
+  for entry in "${inits[@]}"; do
+    echo "  - ${entry%%$'\t'*}"
+  done
+  echo "files:"
+  printf '  - %s\n' "${files[@]}"
+} >"$work/HARNESS_VERSION"
+
+rm -f "$output"
+# 最後の --prefix= が、HARNESS_VERSION と HEAD のファイルに効く(ルートに置く)
+git archive --format=zip --output="$output" "${add_args[@]}" --prefix= --add-file="$work/HARNESS_VERSION" HEAD -- "${files[@]}"
+echo "${#files[@]} 個のファイルと、利用先に置く ${#inits[@]} 個のファイルを $output にまとめました(元にした版: $short)" >&2
+echo "利用先のリポジトリのルートで展開し、bash scripts/harness-init.sh を流してください" >&2

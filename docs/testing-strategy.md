@@ -2,7 +2,7 @@
 
 『単体テストの考え方/使い方』(Vladimir Khorikov、原題 *Unit Testing Principles, Practices, and Patterns*)の古典学派の考え方に沿う。
 
-このリポジトリでは **テストコードが仕様の正本** になる(理由: [ADR-0005](adr/0005-tests-as-specification.md))。
+このリポジトリでは **テストコードが仕様の正本** になる。
 そのため、テストは「動作を守る」だけでなく「仕様として読める」ことも求める。
 
 ## 1. 前提にする考え方
@@ -65,7 +65,7 @@
   - それ以外: docstring の 1 行目に ID だけを書く(例: `"""ORDER-8"""`)
   - 書けているかは `mise run docs:spec` で確かめる。ID のないテストは「(ID なし)」と表示される
   - 番号は機能ごとの連番。次の番号は `mise run test:next-id <接頭辞>` で出す(他のブランチが使っている番号も避ける)
-  - 重複と書き漏れ(ID のないテスト)は `mise run check`(`test:ids`)と CI で落ちる。重複したら、後からマージする側が振り直す([ADR-0010](adr/0010-test-id-numbering.md))
+  - 重複と書き漏れ(ID のないテスト)は `mise run check`(`test:ids`)と CI で落ちる。重複したら、後からマージする側が振り直す
   - pytest は `-v` の表示で日本語の id を `\uXXXX` にエスケープするが、表示だけの問題で、`docs:spec` は元の文字に戻して扱う
 - **テスト ID の接頭辞は、機能の正式な名前を略さずに書く**(例: `ORDER-1`、`LOTTERY-3`、`SHIPPING-2`)。`ORD` のような略語は、読む人が何の略か分からないため使わない。
 - **パラメータには `pytest.param(..., id="…")` で意味のある id を付ける。** id が仕様一覧の行になる。パラメータ名(引数名)は計画の表の列名に揃える。`plan:verify` は列名が一致する列の値を照合する。

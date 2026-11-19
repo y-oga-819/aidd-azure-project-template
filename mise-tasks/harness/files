@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+#MISE description="ハーネスとして配るファイルの一覧(docs/harness/files.txt)が実在するかを確かめる。--list でそのまま配るファイルを、--init で利用先に置くファイルを出す"
+#MISE dir="{{config_root}}"
+#USAGE flag "--list" help="確かめた後、keep に含まれる git 管理下のファイルを 1 行に 1 つ出す"
+#USAGE flag "--init" help="確かめた後、init の「置き場所<TAB>元のファイル」を 1 行に 1 つ出す"
+set -euo pipefail
+
+manifest="docs/harness/files.txt"
+errors=0
+keeps=()
+inits=()
+lineno=0
+
+exists() {
+  local p="$1"
+  if [[ ! -e "$p" ]]; then
+    echo "$manifest:$lineno: 無い: $p(改名・削除したら一覧も直す)" >&2
+    return 1
+  fi
+  if [[ "$p" != */ && -d "$p" ]]; then
+    echo "$manifest:$lineno: ディレクトリは / で終える: $p" >&2
+    return 1
+  fi
+}
+
+while IFS= read -r line || [[ -n "$line" ]]; do
+  lineno=$((lineno + 1))
+  line="${line%%#*}"
+  kind="" path="" src="" rest=""
+  read -r kind path src rest <<<"$line" || true
+  [[ -z "$kind" ]] && continue
+  case "$kind" in
+    keep)
+      if [[ -z "$path" || -n "$src" ]]; then
+        echo "$manifest:$lineno: 「keep <パス>」の形にする: $line" >&2
+        errors=1
+        continue
+      fi
+      exists "$path" || { errors=1; continue; }
+      keeps+=("$path")
+      ;;
+    init)
+      if [[ -z "$path" || -n "$rest" || "$path" == */ ]]; then
+        echo "$manifest:$lineno: 「init <置き場所> [<元のファイル>]」の形にする(ファイルだけ): $line" >&2
+        errors=1
+        continue
+      fi
+      src="${src:-$path}"
+      exists "$src" || { errors=1; continue; }
+      inits+=("$path"$'\t'"$src")
+      ;;
+    *)
+      echo "$manifest:$lineno: 種類は keep か init: $line" >&2
+      errors=1
+      ;;
+  esac
+done <"$manifest"
+
+if [[ $errors -ne 0 ]]; then
+  exit 1
+fi
+
+# zip に入れるファイルは、このリポジトリに置いていくもの(ADR、アプリとインフラのコードなど)を参照しない
+# (docs/harness/README.md の「守ること」)
+mapfile -t keep_files < <(git ls-files -- "${keeps[@]}")
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+printf '%s\n' "${keep_files[@]}" >"$work/keep"
+for entry in "${inits[@]}"; do printf '%s\n' "${entry%%$'\t'*}"; done >"$work/init"
+python3 scripts/lib/harness_refs.py "$work/keep" "$work/init"
+
+if [[ "${usage_list:-false}" == "true" ]]; then
+  printf '%s\n' "${keep_files[@]}"
+elif [[ "${usage_init:-false}" == "true" ]]; then
+  printf '%s\n' "${inits[@]}"
+else
+  echo "ハーネスの一覧にある $((${#keeps[@]} + ${#inits[@]})) 個のパスは、すべてある"
+fi
