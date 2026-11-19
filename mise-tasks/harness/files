@@ -60,14 +60,14 @@ if [[ $errors -ne 0 ]]; then
   exit 1
 fi
 
-# 配るファイルは ADR を参照しない。ADR は配らないので、持ち出した先ではリンクが切れるか、
-# 持ち出した先の同じ番号の別の ADR を指してしまう(docs/harness/README.md の「守ること」)
+# zip に入れるファイルは、このリポジトリに置いていくもの(ADR、アプリとインフラのコードなど)を参照しない
+# (docs/harness/README.md の「守ること」)
 mapfile -t keep_files < <(git ls-files -- "${keeps[@]}")
-if refs="$(grep -n -E '\]\([^)]*(harness/adr/|adr/[0-9]{4}-)|HADR-[0-9]' -- "${keep_files[@]}" 2>/dev/null)"; then
-  echo "配るファイルが ADR を参照している。理由が要るなら文書の中に書き、ADR へのリンクと番号は外す:" >&2
-  echo "$refs" >&2
-  exit 1
-fi
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+printf '%s\n' "${keep_files[@]}" >"$work/keep"
+for entry in "${inits[@]}"; do printf '%s\n' "${entry%%$'\t'*}"; done >"$work/init"
+python3 scripts/lib/harness_refs.py "$work/keep" "$work/init"
 
 if [[ "${usage_list:-false}" == "true" ]]; then
   printf '%s\n' "${keep_files[@]}"
