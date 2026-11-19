@@ -1,7 +1,7 @@
 # ハーネス
 
 AI 駆動でチーム開発するための進め方と、それを支える skill・検査・タスクの一式を「ハーネス」と呼ぶ。
-ハーネスはこのリポジトリ専用ではなく、他のリポジトリへ持ち出して使えるものとして育てる。このリポジトリの中で育て、他のリポジトリへは zip で配って最初のコミットで取り込む([HADR-0008](adr/0008-harness-boundary.md))。
+ハーネスはこのリポジトリ専用ではなく、他のリポジトリへ持ち出して使えるものとして育てる。このリポジトリの中で育て、他のリポジトリへは zip で配って最初のコミットで取り込む。
 
 ## 何がハーネスか
 
@@ -13,14 +13,13 @@ AI 駆動でチーム開発するための進め方と、それを支える skil
 | 補助ツールと mise タスク | `tools/`(aidd_spec。仕様一覧、計画との照合、テスト ID の検査)、`mise-tasks/`(`docs:spec`、`plan:*`、`test:*`、`push` / `pr` / `pr-view`)、`scripts/lib/` |
 | CI | `mise run ci` を呼ぶだけの GitHub Actions と Azure Pipelines の定義 |
 | 進め方の文書とテンプレート | [開発の進め方](../development-flow.md)、[テスト戦略](../testing-strategy.md)、[レビューの観点](../review-guide.md)、[PR テンプレート](../pull_request_template.md)、計画・ADR・機能 README のテンプレート |
-| ハーネスの判断 | [ハーネスの ADR](adr/README.md)(`HADR-NNNN`)。プロジェクトの ADR(`docs/adr/` の `ADR-NNNN`)とは別の連番 |
 
 ## 守ること: 技術は具体的に書き、リポジトリごとの違いだけを分ける
 
 - ハーネスは Angular / Python / Azure の構成を前提にする(下の「ハーネスの立場」)。skill や文書は、Azure、Front Door、App Service、Angular、`backend/` のような具体名で書く。気づくきっかけは具体名のほうで、ぼかすと AI も人も気づけなくなるため。
 - リポジトリごとに違うこと(何を作るか、想定する構成と違う点、インフラのガードレールの場所)だけを [プロジェクトの前提](../project-context.md) に書く。
 - このリポジトリのインフラやアプリの中身(`infra/`、`backend/` のコード)と、技術選定の ADR(`docs/adr/`)はハーネスに入れない。技術選定はプロジェクトの判断で、利用先は自分の ADR-0001 から書く。ハーネスが持つのは、想定する構成の説明(下)と置き場所の約束まで。
-- ハーネスの判断は [ハーネスの ADR](adr/README.md) に `HADR-NNNN` で書く。プロジェクトの ADR と番号を混ぜない。
+- ハーネスの判断(なぜそうしたか、捨てた案)は、ハーネスの元のリポジトリの `docs/harness/adr/` に `HADR-NNNN` で残し、配らない。配る skill や文書は ADR を参照せず、それだけで読めるように書く。理由が要るところは、文書の中に 1〜2 文で書く。持ち出した先の ADR は、そのプロジェクトの判断だけを ADR-0001 から書く。
 - ハーネスにファイルを足したり、改名したり、消したりしたら、[harness-files.txt](files.txt) も直す。一覧のパスが実在するかは `mise run harness:files`(`check` に含む)が確かめる。
 
 ## ハーネスの立場
@@ -31,7 +30,7 @@ AI 駆動でチーム開発するための進め方と、それを支える skil
 | --- | --- | --- |
 | アプリは Angular と Python で、Azure に載せる(下の「想定する構成」) | プランニングの観点(セキュリティ境界、構成・基盤)、テスト戦略のコードの分類と置き場所(`backend/`、`frontend/`)、レビューで疑う場所(`infra/`、`*.bicep`) | 観点とテスト戦略の具体名を書き直す。違いが小さければ、プロジェクトの前提の「想定する構成と違う点」に書くだけでよい |
 | テストは pytest で書く | テスト ID の書き方(`pytest.param` の id、docstring)、仕様一覧と計画の照合(aidd_spec の pytest プラグイン) | 他のテストランナーの分だけ、仕様の収集(`spec-collect`)を足す。照合と ID の検査は収集結果の JSON を読むだけなので、そのまま使える |
-| タスクは mise で動かす([HADR-0001](adr/0001-task-runner-mise.md)) | すべての入口(`check`、`pr`、`docs:spec` など)、CI | 作り直しになる |
+| タスクは mise で動かす | すべての入口(`check`、`pr`、`docs:spec` など)、CI | 作り直しになる |
 | VCS は GitHub か Azure DevOps | `push` / `pr` / `pr-view`(`AIDD_VCS_PROVIDER` で切り替え。[PR 操作の切り替え](../vcs-provider.md))、PR テンプレートの置き場所、CI の定義 | `scripts/lib/vcs.sh` に操作先を足す |
 | 文書と skill は日本語 | すべての文書、skill の質問、テスト名の規約 | 翻訳になる。テスト名を日本語で書く規約([テスト戦略](../testing-strategy.md))も見直す |
 | AI のエージェントは Claude Code | skill の置き場所(`.claude/skills/`) | skill の中身は Markdown なので、他のエージェントの置き場所に移せば読める |
@@ -60,7 +59,7 @@ skill の観点、テスト戦略、レビューの観点は、次の構成を�
 
 ## 持ち出すとき
 
-zip にまとめ、使う側のリポジトリの最初のコミットで取り込む([HADR-0008](adr/0008-harness-boundary.md))。
+zip にまとめ、使う側のリポジトリの最初のコミットで取り込む。
 
 ```sh
 mise run harness:pack            # aidd-harness-<コミット>.zip を作る
