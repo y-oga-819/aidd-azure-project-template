@@ -9,6 +9,7 @@
 # プロジェクトの前提(ハーネスが見出しの名前で指す)。中身はプロジェクトごとなので、空の雛形を置く
 init docs/project-context.md docs/templates/project-context.md
 # AI のエージェントが毎回読む指示。ハーネスの約束(agent-rules.md)を 1 行で読み込む雛形を置く。
+# 雛形は毎回読み込まれるので、説明のコメントを入れない。約束を書き写さず、このリポジトリだけの約束を短く足す。
 # 利用先に CLAUDE.md があれば、@docs/harness/agent-rules.md の 1 行を足すだけでよい
 init CLAUDE.md docs/templates/claude-md.md
 # 共通ツールと集約タスク。利用先に mise.toml があれば、harness-init.sh の案内に従って手でまとめる
