@@ -27,6 +27,7 @@ mise tasks --all    # タスク一覧
 
 | パス | 役割 |
 | --- | --- |
+| `CLAUDE.md` | AI のエージェント(Claude Code)が毎回読む指示。ハーネスの約束([docs/harness/agent-rules.md](docs/harness/agent-rules.md))を読み込み、このリポジトリだけの約束を足す |
 | `mise.toml` | 共通ツールと集約タスク(`check` など) |
 | `backend/` | Python バックエンド。`backend/mise.toml` に専用ツールとタスク |
 | `tools/` | 開発の進め方を支える補助ツール(仕様一覧の生成、計画との照合) |
