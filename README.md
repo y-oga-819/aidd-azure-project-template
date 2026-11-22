@@ -9,7 +9,7 @@
 mise trust          # 初回のみ。リポジトリの mise.toml を信頼する
 mise install        # ツールを揃える
 mise run setup      # 依存関係を入れる
-mise run check      # CI と同じ検査一式(format-check / lint / typecheck / test / test:ids / security)
+mise run check      # CI と同じ検査一式(format-check / lint / typecheck / test / test:ids / harness:files / security)
 mise run format     # 整形
 mise run pr -b <本文>  # check → push → PR 作成(本文は docs/pull_request_template.md の形)
 mise run pr-view    # 現在のブランチの PR と CI の状況
@@ -18,6 +18,8 @@ mise run plan:verify <計画>  # 計画のテストケース一覧とテスト�
 mise run plan:verify-changed # この作業ブランチで変えた計画を全部照合する(CI はレビューに出した PR で流す)
 mise run test:ids   # テスト ID の重複と書き漏れを検出する(check に含む)
 mise run test:mutation      # ミューテーションテスト(任意。変更したファイルだけ)
+mise run harness:files      # ハーネスとして配るファイルの一覧が実在するか(check に含む)
+mise run harness:pack       # ハーネスを zip にまとめる(他のリポジトリの最初のコミットで取り込む)
 mise tasks --all    # タスク一覧
 ```
 
@@ -35,6 +37,10 @@ mise tasks --all    # タスク一覧
 コンポーネント(`frontend/`、`infra/` など)を足すときは、そのディレクトリに `mise.toml` を置き、共通タスク名(`setup` / `format` / `format-check` / `lint` / `typecheck` / `test` / `security`)のうち該当するものを定義する。ルートの `mise run check` と CI に自動で取り込まれるので、ルートの設定を編集する必要はない。共通タスクはクラウドの認証情報なしで通るものにし、デプロイなどは別の名前にする(例: `mise run //infra:deploy`)。
 
 PR 操作の GitHub / Azure DevOps 切り替えは [docs/vcs-provider.md](docs/vcs-provider.md) を参照。
+
+## ハーネスとプロジェクトの境界
+
+進め方・skill・検査・タスクの一式(ハーネス)は、他のリポジトリへ持ち出せるように育てている。ハーネスは Angular / Python / Azure の構成を前提にし、skill や文書は具体名で書く。範囲と立場は [docs/harness/README.md](docs/harness/README.md)、このリポジトリに固有のこと(何を作るか、想定する構成と違う点)は [docs/project-context.md](docs/project-context.md) にある。
 
 ## 開発の進め方とテスト
 

@@ -19,3 +19,6 @@ __pycache__/
 
 # ミューテーションテスト(mutmut)の作業ディレクトリ
 mutants/
+
+# ハーネスの zip(mise run harness:pack)
+aidd-harness-*.zip
