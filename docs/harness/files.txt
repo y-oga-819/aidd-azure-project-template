@@ -37,6 +37,7 @@ keep azure-pipelines.yml
 # 進め方の文書とテンプレート
 keep docs/harness/README.md
 keep docs/harness/files.txt
+keep docs/harness/agent-rules.md
 keep docs/development-flow.md
 keep docs/testing-strategy.md
 keep docs/review-guide.md
