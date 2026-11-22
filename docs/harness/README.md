@@ -9,6 +9,7 @@ AI 駆動でチーム開発するための進め方と、それを支える skil
 
 | まとまり | 中身 |
 | --- | --- |
+| AI への常設の指示 | [AI エージェントへの約束](agent-rules.md)。利用先の `CLAUDE.md` が 1 行で読み込む |
 | skill | プランニング(`/planning`)、PR 前の理解度テスト(`/pr-quiz`) |
 | 補助ツールと mise タスク | `tools/`(aidd_spec。仕様一覧、計画との照合、テスト ID の検査)、`mise-tasks/`(`docs:spec`、`plan:*`、`test:*`、`push` / `pr` / `pr-view`)、`scripts/lib/` |
 | CI | `mise run ci` を呼ぶだけの GitHub Actions と Azure Pipelines の定義 |
@@ -33,7 +34,7 @@ AI 駆動でチーム開発するための進め方と、それを支える skil
 | タスクは mise で動かす | すべての入口(`check`、`pr`、`docs:spec` など)、CI | 作り直しになる |
 | VCS は GitHub か Azure DevOps | `push` / `pr` / `pr-view`(`AIDD_VCS_PROVIDER` で切り替え。[PR 操作の切り替え](../vcs-provider.md))、PR テンプレートの置き場所、CI の定義 | `scripts/lib/vcs.sh` に操作先を足す |
 | 文書と skill は日本語 | すべての文書、skill の質問、テスト名の規約 | 翻訳になる。テスト名を日本語で書く規約([テスト戦略](../testing-strategy.md))も見直す |
-| AI のエージェントは Claude Code | skill の置き場所(`.claude/skills/`) | skill の中身は Markdown なので、他のエージェントの置き場所に移せば読める |
+| AI のエージェントは Claude Code | skill の置き場所(`.claude/skills/`)、約束を読み込む `CLAUDE.md` | skill と約束の中身は Markdown なので、他のエージェントの置き場所(`AGENTS.md` など)から読み込めば使える |
 
 ## 想定する構成
 
@@ -67,7 +68,7 @@ mise run harness:pack -o <file>  # 出力先を指定する
 ```
 
 1. このリポジトリで `mise run harness:pack` を流す。中身は HEAD のコミットから取る(未コミットの変更は入らない)。
-2. 使う側のリポジトリのルートで zip を展開し、`bash scripts/harness-init.sh` を流す。一覧の `init` のファイル(プロジェクトの前提の空の雛形、ルートの `mise.toml`)は、展開しても既存のファイルを上書きしないよう zip の `.harness-init/` に入っている。スクリプトは、置き場所に無いものだけを置く。もともと `mise.toml` があれば上書きせず、まとめ方を表示する。
+2. 使う側のリポジトリのルートで zip を展開し、`bash scripts/harness-init.sh` を流す。一覧の `init` のファイル(プロジェクトの前提の空の雛形、`CLAUDE.md` の雛形、ルートの `mise.toml`)は、展開しても既存のファイルを上書きしないよう zip の `.harness-init/` に入っている。スクリプトは、置き場所に無いものだけを置く。もともと `mise.toml` があれば上書きせず、まとめ方を表示する。
 3. スクリプトの案内に従って、プロジェクトの前提を書き、`mise run setup` と `mise run check` を流す。テストを持つコンポーネントがまだ無くても check は通る。
 4. `HARNESS_VERSION` も一緒にコミットする。元にした版(コミット)と、置いたファイルと、入れたファイルの一覧がある。
 
