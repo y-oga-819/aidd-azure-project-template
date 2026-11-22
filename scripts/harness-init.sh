@@ -39,7 +39,11 @@ for f in "${placed[@]}"; do
 done
 for f in "${kept[@]}"; do
   echo "既にあるので上書きしなかった: $f"
-  echo "  ハーネスの版は $staging/$f にある。diff -u $f $staging/$f を見て手でまとめ、終わったら $staging/$f を消す"
+  if [[ "$f" == "CLAUDE.md" ]]; then
+    echo "  既存の CLAUDE.md の先頭に @docs/harness/agent-rules.md の 1 行を足し、終わったら $staging/$f を消す"
+  else
+    echo "  ハーネスの版は $staging/$f にある。diff -u $f $staging/$f を見て手でまとめ、終わったら $staging/$f を消す"
+  fi
 done
 
 cat <<'E'

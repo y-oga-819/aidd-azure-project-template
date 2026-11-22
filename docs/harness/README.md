@@ -68,7 +68,7 @@ mise run harness:pack -o <file>  # 出力先を指定する
 ```
 
 1. このリポジトリで `mise run harness:pack` を流す。中身は HEAD のコミットから取る(未コミットの変更は入らない)。
-2. 使う側のリポジトリのルートで zip を展開し、`bash scripts/harness-init.sh` を流す。一覧の `init` のファイル(プロジェクトの前提の空の雛形、ルートの `mise.toml`)は、展開しても既存のファイルを上書きしないよう zip の `.harness-init/` に入っている。スクリプトは、置き場所に無いものだけを置く。もともと `mise.toml` があれば上書きせず、まとめ方を表示する。
+2. 使う側のリポジトリのルートで zip を展開し、`bash scripts/harness-init.sh` を流す。一覧の `init` のファイル(プロジェクトの前提の空の雛形、`CLAUDE.md` の雛形、ルートの `mise.toml`)は、展開しても既存のファイルを上書きしないよう zip の `.harness-init/` に入っている。スクリプトは、置き場所に無いものだけを置く。もともと `mise.toml` があれば上書きせず、まとめ方を表示する。
 3. スクリプトの案内に従って、プロジェクトの前提を書き、`mise run setup` と `mise run check` を流す。テストを持つコンポーネントがまだ無くても check は通る。
 4. `HARNESS_VERSION` も一緒にコミットする。元にした版(コミット)と、置いたファイルと、入れたファイルの一覧がある。
 
